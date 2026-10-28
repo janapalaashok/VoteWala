@@ -1,0 +1,22 @@
+name: Fetch 2024 results
+
+on:
+  push:
+    branches: ['claude/**']
+    paths: ['tools/fetch_2024_results.py', '.github/workflows/fetch-data.yml']
+  workflow_dispatch:
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install beautifulsoup4
+      - run: python tools/fetch_2024_results.py | tee results-2024.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: results-2024
+          path: results-2024.txt
