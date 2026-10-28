@@ -10,3 +10,4 @@ public/brand/*.png
 src/app/favicon.ico
 src/app/icon.png
 src/app/apple-icon.png
+deploy/gcp/config.env

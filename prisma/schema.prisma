@@ -6,7 +6,9 @@
 //   * a vote's option must belong to its poll -> composite FK (optionId, pollId)
 
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  // "native" for local development; debian-openssl-3.0.x for the Docker / Cloud Run image.
+  binaryTargets = ["native", "debian-openssl-3.0.x"]
 }
 
 datasource db {

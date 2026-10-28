@@ -24,6 +24,10 @@ npm run db:seed             # 175 Assembly + 25 Lok Sabha constituencies (idempo
 
 Do **not** run `npm run db:seed:demo` in production: it creates fictional demo candidates and polls.
 
+## 3. Google Cloud
+
+See [DEPLOY-GCP.md](DEPLOY-GCP.md) (Cloud Run + Cloud SQL, scripted).
+
 ## 3a. Vercel
 
 1. Import the repository and add the environment variables above.

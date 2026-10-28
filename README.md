@@ -89,5 +89,5 @@ that the audit log is append-only. CI runs them all (`.github/workflows/ci.yml`)
 
 ## Deployment
 
-See [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) for Vercel and Docker instructions,
-required external credentials and a go-live checklist.
+- **Google Cloud (Cloud Run + Cloud SQL):** [`docs/DEPLOY-GCP.md`](docs/DEPLOY-GCP.md). Two scripts, `deploy/gcp/setup.sh` and `deploy/gcp/deploy.sh`, run from Cloud Shell.
+- Vercel / Docker, required credentials and the go-live checklist: [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
