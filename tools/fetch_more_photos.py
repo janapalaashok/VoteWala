@@ -14,13 +14,20 @@ import urllib.request
 UA = {"User-Agent": "VoteWalaDataBot/1.0 (https://github.com/janapalaashok/VoteWala)"}
 
 
+stats = {"errors": 0, "searched": 0, "with_hits": 0, "politician": 0, "name_match": 0, "with_image": 0}
+
+
 def get(url, params):
     full = url + "?" + urllib.parse.urlencode({**params, "format": "json"})
     for attempt in range(3):
         try:
             with urllib.request.urlopen(urllib.request.Request(full, headers=UA), timeout=60) as r:
                 return json.load(r)
-        except Exception:
+        except Exception as e:
+            if attempt == 2:
+                stats["errors"] += 1
+                if stats["errors"] <= 3:
+                    print("ERROR", url, e)
             time.sleep(2 + attempt * 3)
     return {}
 
@@ -37,11 +44,15 @@ out = []
 for name in names:
     hits = get("https://www.wikidata.org/w/api.php",
                {"action": "wbsearchentities", "search": name, "language": "en", "limit": 7, "type": "item"})
+    stats["searched"] += 1
+    if hits.get("search"):
+        stats["with_hits"] += 1
     ids = [h["id"] for h in hits.get("search", [])
            if "politician" in h.get("description", "").lower()
            and any(w in h.get("description", "").lower() for w in ("india", "andhra", "telugu"))]
     if not ids:
         continue
+    stats["politician"] += 1
     ents = get("https://www.wikidata.org/w/api.php",
                {"action": "wbgetentities", "ids": "|".join(ids), "props": "claims|labels|aliases|descriptions",
                 "languages": "en"}).get("entities", {})
@@ -51,7 +62,10 @@ for name in names:
         labels += [a["value"] for a in e.get("aliases", {}).get("en", [])]
         if norm(name) not in {norm(l) for l in labels}:
             continue
+        stats["name_match"] += 1
         p18 = e.get("claims", {}).get("P18")
+        if p18:
+            stats["with_image"] += 1
         if p18:
             good.append((qid, p18[0]["mainsnak"]["datavalue"]["value"],
                          e.get("descriptions", {}).get("en", {}).get("value", "")))
@@ -71,4 +85,4 @@ for name in names:
 with open("tools/data/photos-extra.txt", "w", encoding="utf-8") as f:
     for line in out:
         f.write("PHOTO|" + json.dumps(line, ensure_ascii=False) + "\n")
-print(f"found {len(out)} of {len(names)}")
+print(f"found {len(out)} of {len(names)}", stats)
