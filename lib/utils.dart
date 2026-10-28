@@ -9,11 +9,8 @@ DateTime istToday() {
   return DateTime.utc(n.year, n.month, n.day);
 }
 
-/// Daily polls close at midnight IST.
-Duration timeUntilPollClose() {
-  final n = istNow();
-  return DateTime.utc(n.year, n.month, n.day + 1).difference(n);
-}
+/// Time left until [end] (an IST wall-clock time).
+Duration timeUntil(DateTime end) => end.difference(istNow());
 
 String dayKey(DateTime day) => '${day.year}-${_two(day.month)}-${_two(day.day)}';
 
@@ -55,10 +52,21 @@ const _months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 
 String formatDate(DateTime d) => '${d.day} ${_months[d.month - 1]} ${d.year}';
 
 String formatCountdown(Duration d) {
-  final h = d.inHours;
+  if (d.isNegative) d = Duration.zero;
+  final days = d.inDays;
+  final h = d.inHours % 24;
   final m = d.inMinutes % 60;
   final s = d.inSeconds % 60;
-  return '${_two(h)}h ${_two(m)}m ${_two(s)}s';
+  return days > 0 ? '${days}d ${_two(h)}h ${_two(m)}m' : '${_two(h)}h ${_two(m)}m ${_two(s)}s';
+}
+
+/// Stable string hash (Dart's String.hashCode differs between platforms).
+int stableHash(String s) {
+  var h = 0;
+  for (final c in s.codeUnits) {
+    h = (h * 31 + c) & 0x3fffffff;
+  }
+  return h;
 }
 
 String _two(int n) => n.toString().padLeft(2, '0');

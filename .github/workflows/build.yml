@@ -24,6 +24,9 @@ jobs:
       - run: flutter pub get
       - run: flutter analyze
       - run: flutter test
+      - name: Check candidate photo URLs
+        run: tools/check_photos.sh
+        continue-on-error: true
       - run: flutter build apk --release
       - run: cp build/app/outputs/flutter-apk/app-release.apk VoteWala.apk
       - uses: actions/upload-artifact@v4

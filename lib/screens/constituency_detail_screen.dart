@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../data/ap_data.dart';
+import '../data/poll_month.dart';
 import '../data/poll_repository.dart';
 import '../l10n/strings.dart';
 import '../state/app_state.dart';
@@ -48,7 +49,7 @@ class ConstituencyDetailScreen extends StatelessWidget {
                     Text(c.name(!te), style: const TextStyle(fontSize: 16, color: AppColors.muted)),
                   ]),
                 ),
-                Blob(color: snapshot.candidates[snapshot.leader].party.color, seed: c.no + (c.isMla ? 0 : 500), size: 40),
+                PartyDot(snapshot.leadingParty.color, size: 36),
               ]),
             ),
             TabBar(isScrollable: true, tabAlignment: TabAlignment.start, tabs: [
@@ -84,6 +85,8 @@ class _PollTab extends StatefulWidget {
 class _PollTabState extends State<_PollTab> {
   int? _selected;
 
+  String _typeLabel(BuildContext context) => widget.constituency.isMla ? 'MLA' : 'MP';
+
   Future<void> _submit(List<Candidate> candidates) async {
     final te = context.isTelugu;
     if (_selected == null) {
@@ -95,7 +98,12 @@ class _PollTabState extends State<_PollTab> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text(ctx.tr('confirmVote')),
-        content: Text(ctx.tr('confirmVoteBody', {'name': candidate.name(te), 'party': candidate.party.short})),
+        content: Text(ctx.tr('confirmVoteBody', {
+          'name': candidate.name(te),
+          'party': candidate.party.shortName(te),
+          'type': _typeLabel(ctx),
+          'month': PollMonth.current().label(te),
+        })),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(ctx.tr('cancel'))),
           TextButton(onPressed: () => Navigator.pop(ctx, true), child: Text(ctx.tr('confirm'))),
@@ -103,7 +111,7 @@ class _PollTabState extends State<_PollTab> {
       ),
     );
     if (ok != true || !mounted) return;
-    AppScope.read(context).castVote(candidate);
+    if (!AppScope.read(context).castVote(candidate)) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       backgroundColor: AppColors.green,
       content: Text(context.tr('voteRecorded')),
@@ -118,28 +126,31 @@ class _PollTabState extends State<_PollTab> {
     final c = widget.constituency;
     final te = context.isTelugu;
     final state = AppScope.of(context);
+    final month = PollMonth.current();
     final snapshot = state.snapshot(c);
     final candidates = snapshot.candidates;
     final voted = state.choiceIndex(c);
-    final locked = voted != null || snapshot.closed;
+    final usedElsewhere = voted == null ? state.monthlyVote(c.type) : null;
+    final locked = voted != null || usedElsewhere != null || state.user == null;
     final typeLabel = context.tr(c.isMla ? 'assemblyConstituency' : 'parliamentConstituency');
 
     return ListView(padding: const EdgeInsets.all(16), children: [
       Row(children: [
-        LiveBadge(closed: snapshot.closed, long: true),
+        const LiveBadge(long: true),
         const Spacer(),
-        if (!snapshot.closed) ...[
-          Text(context.tr('closesIn'), style: const TextStyle(fontSize: 12.5, color: AppColors.muted)),
-          const SizedBox(width: 8),
-          const _Countdown(),
-        ],
+        Text(context.tr('closesIn'), style: const TextStyle(fontSize: 12.5, color: AppColors.muted)),
+        const SizedBox(width: 8),
+        _Countdown(until: month.end),
       ]),
-      const SizedBox(height: 18),
+      const SizedBox(height: 6),
+      Text(context.tr('monthPoll', {'month': month.label(te)}),
+          style: const TextStyle(color: AppColors.muted, fontSize: 12.5)),
+      const SizedBox(height: 14),
       Text(context.tr('question', {'name': c.name(te), 'type': typeLabel}),
           style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700, height: 1.3)),
       if (!te) ...[
         const SizedBox(height: 6),
-        Text('${c.te} ${c.isMla ? 'అసెంబ్లీ నియోజకవర్గంలో' : 'పార్లమెంట్ నియోజకవర్గంలో'} మీ మద్దతు ఎవరికి?',
+        Text('ఈ నెల ${c.te} ${c.isMla ? 'అసెంబ్లీ నియోజకవర్గంలో' : 'పార్లమెంట్ నియోజకవర్గంలో'} మీ మద్దతు ఎవరికి?',
             style: const TextStyle(color: AppColors.muted, height: 1.3)),
       ],
       const SizedBox(height: 16),
@@ -152,15 +163,29 @@ class _PollTabState extends State<_PollTab> {
             onTap: locked ? null : () => setState(() => _selected = cand.index),
           ),
         ),
-      const SizedBox(height: 10),
+      const SizedBox(height: 6),
       if (voted != null)
         _Notice(
           icon: Icons.check_circle,
           color: AppColors.green,
-          text: context.tr('youVotedFor', {'name': '${candidates[voted].name(te)} (${candidates[voted].party.short})'}),
+          text: context.tr('youVotedFor', {'name': candidates[voted].name(te)}),
         )
-      else if (snapshot.closed)
-        _Notice(icon: Icons.lock_outline, color: AppColors.muted, text: '${context.tr('pollClosedBody')} ${context.tr('nextPoll')}'),
+      else if (usedElsewhere != null) ...[
+        _Notice(
+          icon: Icons.info_outline,
+          color: AppColors.orange,
+          text: context.tr('alreadyUsed', {
+            'type': _typeLabel(context),
+            'month': month.label(te),
+            'name': usedElsewhere.constituency.name(te),
+            'next': month.next.label(te),
+          }),
+        ),
+        TextButton(
+          onPressed: () => openConstituency(context, usedElsewhere.constituency),
+          child: Text(context.tr('openVotedPoll')),
+        ),
+      ],
       const SizedBox(height: 10),
       if (locked)
         OutlinedButton.icon(
@@ -171,12 +196,17 @@ class _PollTabState extends State<_PollTab> {
         )
       else
         FilledButton(onPressed: () => _submit(candidates), child: Text(context.tr('submitVote'))),
+      const SizedBox(height: 12),
+      Text(context.tr('monthlyRule'),
+          textAlign: TextAlign.center, style: const TextStyle(color: AppColors.muted, fontSize: 12, height: 1.4)),
     ]);
   }
 }
 
 class _Countdown extends StatefulWidget {
-  const _Countdown();
+  const _Countdown({required this.until});
+
+  final DateTime until;
 
   @override
   State<_Countdown> createState() => _CountdownState();
@@ -204,7 +234,7 @@ class _CountdownState extends State<_Countdown> {
         child: Row(mainAxisSize: MainAxisSize.min, children: [
           const Icon(Icons.schedule, size: 14, color: AppColors.green),
           const SizedBox(width: 4),
-          Text(formatCountdown(timeUntilPollClose()),
+          Text(formatCountdown(timeUntil(widget.until)),
               style: const TextStyle(
                 color: AppColors.green,
                 fontWeight: FontWeight.w700,
@@ -214,6 +244,12 @@ class _CountdownState extends State<_Countdown> {
         ]),
       );
 }
+
+String roleLabel(BuildContext context, Candidate c) => switch (c.role) {
+      CandidateRole.won2024 => context.tr(c.constituency.isMla ? 'sittingMla' : 'sittingMp'),
+      CandidateRole.runnerUp2024 => context.tr('runnerUp2024'),
+      CandidateRole.other => context.tr('othersOption'),
+    };
 
 class _CandidateOption extends StatelessWidget {
   const _CandidateOption({required this.candidate, required this.selected, this.onTap});
@@ -228,16 +264,18 @@ class _CandidateOption extends StatelessWidget {
         borderColor: selected ? AppColors.orange : null,
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         child: Row(children: [
-          CandidateAvatar(candidate, size: 44),
+          CandidateAvatar(candidate, size: 48),
           const SizedBox(width: 12),
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(candidate.name(context.isTelugu), style: const TextStyle(fontWeight: FontWeight.w700)),
-              Text(candidate.party.short, style: const TextStyle(color: AppColors.muted, fontSize: 12.5)),
+              if (candidate.isPerson)
+                Text(candidate.party.short, style: const TextStyle(color: AppColors.muted, fontSize: 12.5)),
+              Text(roleLabel(context, candidate), style: const TextStyle(color: AppColors.muted, fontSize: 11.5)),
             ]),
           ),
-          PartySymbolBadge(candidate.party, size: 42),
-          const SizedBox(width: 16),
+          PartySymbolBadge(candidate.party, size: 40),
+          const SizedBox(width: 14),
           Icon(
             selected ? Icons.radio_button_checked : Icons.radio_button_unchecked,
             color: selected ? AppColors.orange : AppColors.grey,
@@ -263,7 +301,7 @@ class _Notice extends StatelessWidget {
         child: Row(children: [
           Icon(icon, color: color),
           const SizedBox(width: 10),
-          Expanded(child: Text(text, style: const TextStyle(fontWeight: FontWeight.w500))),
+          Expanded(child: Text(text, style: const TextStyle(fontWeight: FontWeight.w500, height: 1.35))),
         ]),
       );
 }
@@ -275,13 +313,13 @@ class _CandidatesTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final candidates = PollRepository.candidates(constituency);
-    return ListView.separated(
-      padding: const EdgeInsets.all(16),
-      itemCount: candidates.length,
-      separatorBuilder: (_, _) => const SizedBox(height: 10),
-      itemBuilder: (_, i) => CandidateListCard(candidate: candidates[i]),
-    );
+    final candidates = PollRepository.candidates(constituency).where((c) => c.isPerson).toList();
+    return ListView(padding: const EdgeInsets.all(16), children: [
+      for (final c in candidates)
+        Padding(padding: const EdgeInsets.only(bottom: 10), child: CandidateListCard(candidate: c)),
+      const SizedBox(height: 4),
+      Text(context.tr('dataCredit'), style: const TextStyle(color: AppColors.muted, fontSize: 11.5, height: 1.4)),
+    ]);
   }
 }
 
@@ -298,17 +336,25 @@ class CandidateListCard extends StatelessWidget {
       onTap: () => Navigator.of(context)
           .push(MaterialPageRoute<void>(builder: (_) => CandidateDetailScreen(candidate: candidate))),
       child: Row(children: [
-        CandidateAvatar(candidate, size: 48),
+        CandidateAvatar(candidate, size: 50),
         const SizedBox(width: 12),
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(candidate.name(te), style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
             Text(candidate.party.name(te), style: const TextStyle(color: AppColors.muted, fontSize: 12.5)),
-            if (showConstituency)
-              Text(candidate.constituency.name(te), style: const TextStyle(color: AppColors.muted, fontSize: 12.5)),
+            Text(
+              showConstituency
+                  ? '${candidate.constituency.name(te)} · ${roleLabel(context, candidate)}'
+                  : roleLabel(context, candidate),
+              style: TextStyle(
+                color: candidate.role == CandidateRole.won2024 ? AppColors.green : AppColors.muted,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ]),
         ),
-        PartySymbolBadge(candidate.party, size: 40),
+        PartySymbolBadge(candidate.party, size: 38),
         const Icon(Icons.chevron_right, color: AppColors.muted),
       ]),
     );
@@ -353,6 +399,8 @@ class _AboutTab extends StatelessWidget {
     final c = constituency;
     final te = context.isTelugu;
     final pc = ApData.pcFor(c);
+    final winner = Candidate(c, 0), runnerUp = Candidate(c, 1);
+    final r = winner.result2024;
     Widget row(String label, String value, {VoidCallback? onTap}) => ListTile(
           title: Text(label, style: const TextStyle(color: AppColors.muted, fontSize: 13)),
           subtitle: Text(value,
@@ -365,13 +413,37 @@ class _AboutTab extends StatelessWidget {
           onTap: onTap,
         );
     return ListView(padding: const EdgeInsets.symmetric(vertical: 8), children: [
+      Padding(
+        padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+        child: AppCard(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(context.tr('result2024'), style: const TextStyle(fontWeight: FontWeight.w800)),
+            const SizedBox(height: 10),
+            for (final cand in [winner, runnerUp])
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: Row(children: [
+                  CandidateAvatar(cand, size: 36),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text('${cand.name(te)} (${cand.party.short})',
+                        style: const TextStyle(fontWeight: FontWeight.w600)),
+                  ),
+                  Text(formatIndian(cand.contestant!.votes), style: const TextStyle(fontWeight: FontWeight.w700)),
+                ]),
+              ),
+            const SizedBox(height: 4),
+            Text(context.tr('wonBy', {'n': formatIndian(r.margin)}),
+                style: const TextStyle(color: AppColors.green, fontWeight: FontWeight.w600)),
+          ]),
+        ),
+      ),
       row(context.tr('constituencyNo'), '${c.no}'),
       row(context.tr('electionType'), context.tr(c.isMla ? 'assemblyMla' : 'parliamentMp')),
       row(context.tr(c.districtIds.length > 1 ? 'districts' : 'district'), c.districts.map((d) => d.name(te)).join(', ')),
       if (pc != null)
         row(context.tr('parliamentConstituency'), pc.name(te), onTap: () => openConstituency(context, pc)),
-      row(context.tr('candidates'), '${parties.length}'),
-      row(context.tr('pollSchedule'), context.tr('pollScheduleBody')),
+      row(context.tr('pollSchedule'), context.tr('monthlyRule')),
       if (!c.isMla) ...[
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
@@ -386,6 +458,10 @@ class _AboutTab extends StatelessWidget {
             onTap: () => openConstituency(context, ApData.mla[no - 1]),
           ),
       ],
+      Padding(
+        padding: const EdgeInsets.all(16),
+        child: Text(context.tr('dataCredit'), style: const TextStyle(color: AppColors.muted, fontSize: 11.5)),
+      ),
     ]);
   }
 }

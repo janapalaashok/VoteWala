@@ -59,7 +59,8 @@ class _LiveResultsScreenState extends State<LiveResultsScreen> {
               Row(children: [
                 LiveBadge(closed: snapshot.closed),
                 const Spacer(),
-                Text(context.tr('updatedJustNow'), style: const TextStyle(color: AppColors.muted, fontSize: 12.5)),
+                Text('${snapshot.month.label(te)} · ${context.tr('updatedJustNow')}',
+                    style: const TextStyle(color: AppColors.muted, fontSize: 12.5)),
               ]),
               const SizedBox(height: 10),
               for (final i in snapshot.ranking)

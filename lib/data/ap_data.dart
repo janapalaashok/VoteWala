@@ -55,7 +55,7 @@ class Constituency {
   }
 }
 
-enum PartySymbol { bicycle, fan, glass, lotus, independent }
+enum PartySymbol { bicycle, fan, glass, lotus, hand, other }
 
 class Party {
   const Party(this.id, this.short, this.en, this.te, this.color, this.symbol);
@@ -68,15 +68,27 @@ class Party {
   final PartySymbol symbol;
 
   String name(bool telugu) => telugu ? te : en;
+  String shortName(bool telugu) => id == 'oth' ? (telugu ? 'ఇతరులు' : 'Others') : short;
+
+  /// Seat tallies show the four main parties; everything else is "Others".
+  String get group => mainPartyIds.contains(id) ? id : 'oth';
 }
+
+const mainPartyIds = ['tdp', 'ysrcp', 'jsp', 'bjp'];
+
+/// Groups used for seat tallies, in display order.
+const seatGroups = ['tdp', 'ysrcp', 'jsp', 'bjp', 'oth'];
 
 const parties = <Party>[
   Party('tdp', 'TDP', 'Telugu Desam Party', 'తెలుగుదేశం పార్టీ', Color(0xFFF5C400), PartySymbol.bicycle),
   Party('ysrcp', 'YSRCP', 'YSR Congress Party', 'వైఎస్ఆర్ కాంగ్రెస్ పార్టీ', Color(0xFF2F6FDB), PartySymbol.fan),
-  Party('jsp', 'Janasena', 'Janasena Party', 'జనసేన పార్టీ', Color(0xFFE53935), PartySymbol.glass),
+  Party('jsp', 'JSP', 'Janasena Party', 'జనసేన పార్టీ', Color(0xFFE53935), PartySymbol.glass),
   Party('bjp', 'BJP', 'Bharatiya Janata Party', 'భారతీయ జనతా పార్టీ', Color(0xFFF57C00), PartySymbol.lotus),
-  Party('ind', 'Independent', 'Independent', 'స్వతంత్ర', Color(0xFF8E9AAF), PartySymbol.independent),
+  Party('inc', 'INC', 'Indian National Congress', 'భారత జాతీయ కాంగ్రెస్', Color(0xFF19A974), PartySymbol.hand),
+  Party('oth', 'Others', 'Others / NOTA', 'ఇతరులు / నోటా', Color(0xFF8E9AAF), PartySymbol.other),
 ];
+
+Party partyById(String id) => parties.firstWhere((p) => p.id == id, orElse: () => parties.last);
 
 class ApData {
   static const districts = <District>[

@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 
-import 'data/poll_repository.dart';
-
 class AppColors {
   static const orange = Color(0xFFF47A1F);
   static const orangeDark = Color(0xFFE5640C);
@@ -16,12 +14,6 @@ class AppColors {
   static const amber = Color(0xFFF6B21A);
   static const grey = Color(0xFFB8BEC8);
 
-  static Color race(RaceStatus s) => switch (s) {
-        RaceStatus.clearLead => green,
-        RaceStatus.close => amber,
-        RaceStatus.tight => red,
-        RaceStatus.noData => grey,
-      };
 }
 
 ThemeData buildTheme() {

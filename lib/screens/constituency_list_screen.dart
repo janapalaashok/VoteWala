@@ -102,11 +102,7 @@ class _ConstituencyListScreenState extends State<ConstituencyListScreen> {
                             if (filtered.any((c) => c.districtIds.contains(d.id)))
                               ExpansionTile(
                                 initiallyExpanded: _query.isNotEmpty,
-                                leading: Blob(
-                                  color: AppColors.race(state.districtSummary(d, widget.type).status),
-                                  seed: d.firstAc * 3,
-                                  size: 30,
-                                ),
+                                leading: SeatDonut(state.districtSummary(d, widget.type).tally, size: 34),
                                 title: Text(d.name(te), style: const TextStyle(fontWeight: FontWeight.w700)),
                                 subtitle: Text(context.tr('nConstituencies', {
                                   'n': '${filtered.where((c) => c.districtIds.contains(d.id)).length}',

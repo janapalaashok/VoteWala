@@ -4,8 +4,9 @@ import 'package:flutter/widgets.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../data/ap_data.dart';
+import '../data/featured_polls.dart';
+import '../data/poll_month.dart';
 import '../data/poll_repository.dart';
-import '../utils.dart';
 
 class AppUser {
   const AppUser({required this.name, this.email, this.phone, required this.provider});
@@ -14,6 +15,9 @@ class AppUser {
   final String? email;
   final String? phone;
   final String provider;
+
+  /// Identity that votes are counted against (one vote per account).
+  String get key => email ?? phone ?? name;
 
   Map<String, dynamic> toJson() => {'name': name, 'email': email, 'phone': phone, 'provider': provider};
 
@@ -25,13 +29,12 @@ class AppUser {
       );
 }
 
-/// A vote the user cast: which candidate, in which poll, on which day.
+/// A constituency vote the user cast in a monthly poll.
 class VoteRecord {
-  const VoteRecord(this.pollId, this.day, this.candidateId);
+  const VoteRecord(this.month, this.candidate);
 
-  final String pollId;
-  final DateTime day;
-  final String candidateId;
+  final PollMonth month;
+  final Candidate candidate;
 }
 
 class AppState extends ChangeNotifier {
@@ -39,18 +42,24 @@ class AppState extends ChangeNotifier {
     _lang = _prefs.getString('lang') ?? 'en';
     final user = _prefs.getString('user');
     if (user != null) _user = AppUser.fromJson(jsonDecode(user) as Map<String, dynamic>);
-    final votes = _prefs.getString('votes');
+    final votes = _prefs.getString(_votesKey);
     if (votes != null) _votes = Map<String, String>.from(jsonDecode(votes) as Map);
-    _saved = (_prefs.getStringList('saved') ?? const []).toSet();
+    _saved = (_prefs.getStringList(_savedKey) ?? const []).toSet();
     final notif = _prefs.getString('notif');
     if (notif != null) _notif.addAll(Map<String, bool>.from(jsonDecode(notif) as Map));
   }
+
+  static const _votesKey = 'votes_v2';
+  static const _savedKey = 'saved_v2';
 
   final SharedPreferences _prefs;
 
   late String _lang;
   AppUser? _user;
-  Map<String, String> _votes = {}; // "<pollId>|<day>" -> candidateId
+
+  /// `user|mla|YYYY-MM` -> candidate id,
+  /// `user|featured|pollId` -> `optionIndex|YYYY-MM`.
+  Map<String, String> _votes = {};
   Set<String> _saved = {};
   final Map<String, bool> _notif = {'daily': true, 'results': true, 'featured': false};
 
@@ -64,6 +73,7 @@ class AppState extends ChangeNotifier {
   }
 
   AppUser? get user => _user;
+  String get _uk => _user?.key ?? 'guest';
 
   void signIn(AppUser user) {
     _user = user;
@@ -77,38 +87,107 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  int? choiceIndex(Constituency c, [DateTime? day]) {
-    final id = _votes['${c.id}|${dayKey(day ?? istToday())}'];
-    return id == null ? null : Candidate.byId(id).index;
+  void _saveVotes() => _prefs.setString(_votesKey, jsonEncode(_votes));
+
+  // --- Monthly constituency votes: 1 MLA + 1 MP per user per month. ---
+
+  String _monthlyKey(ElectionType type, PollMonth m) => '$_uk|${type.name}|${m.key}';
+
+  /// The candidate this user voted for in [type] polls during [month].
+  Candidate? monthlyVote(ElectionType type, [PollMonth? month]) {
+    final id = _votes[_monthlyKey(type, month ?? PollMonth.current())];
+    return id == null ? null : Candidate.byId(id);
   }
 
-  PollSnapshot snapshot(Constituency c, {DateTime? day}) =>
-      PollRepository.snapshot(c, day: day, userChoice: choiceIndex(c, day));
+  int? choiceIndex(Constituency c, [PollMonth? month]) {
+    final v = monthlyVote(c.type, month);
+    return v != null && v.constituency.id == c.id ? v.index : null;
+  }
 
-  DistrictSummary districtSummary(District d, ElectionType type, {DateTime? day}) =>
-      PollRepository.districtSummary(d, type, day: day, choiceOf: (c) => choiceIndex(c, day));
+  bool canVote(Constituency c) => _user != null && monthlyVote(c.type) == null;
 
-  void castVote(Candidate candidate) {
-    _votes['${candidate.constituency.id}|${dayKey(istToday())}'] = candidate.id;
-    _prefs.setString('votes', jsonEncode(_votes));
+  /// Records a vote; returns false if this month's vote for that type is used.
+  bool castVote(Candidate candidate) {
+    if (!canVote(candidate.constituency)) return false;
+    _votes[_monthlyKey(candidate.constituency.type, PollMonth.current())] = candidate.id;
+    _saveVotes();
     notifyListeners();
+    return true;
   }
+
+  PollSnapshot snapshot(Constituency c, {PollMonth? month}) =>
+      PollRepository.snapshot(c, month: month, userChoice: choiceIndex(c, month));
+
+  List<PollSnapshot> snapshots(ElectionType type, {PollMonth? month}) =>
+      [for (final c in ApData.of(type)) snapshot(c, month: month)];
+
+  DistrictSummary districtSummary(District d, ElectionType type, {PollMonth? month}) => DistrictSummary(
+        d,
+        [for (final c in ApData.of(type)) if (c.districtIds.contains(d.id)) snapshot(c, month: month)],
+      );
 
   List<VoteRecord> get voteHistory {
-    final list = [
-      for (final e in _votes.entries)
-        VoteRecord(e.key.split('|').first, parseDayKey(e.key.split('|').last), e.value),
-    ];
-    list.sort((a, b) => b.day.compareTo(a.day));
+    final list = <VoteRecord>[];
+    for (final e in _votes.entries) {
+      final p = e.key.split('|');
+      if (p.length == 3 && p[0] == _uk && p[1] != 'featured') {
+        list.add(VoteRecord(PollMonth.parse(p[2]), Candidate.byId(e.value)));
+      }
+    }
+    list.sort((a, b) => b.month.compareTo(a.month));
     return list;
   }
+
+  // --- Featured polls: one vote per user for the whole poll. ---
+
+  String _featuredKey(FeaturedPoll p) => '$_uk|featured|${p.id}';
+
+  int? featuredChoice(FeaturedPoll p) {
+    final v = _votes[_featuredKey(p)];
+    return v == null ? null : int.parse(v.split('|').first);
+  }
+
+  PollMonth? featuredVoteMonth(FeaturedPoll p) {
+    final v = _votes[_featuredKey(p)];
+    return v == null ? null : PollMonth.parse(v.split('|').last);
+  }
+
+  bool castFeaturedVote(FeaturedPoll p, int option) {
+    if (_user == null || !p.isOpen || featuredChoice(p) != null) return false;
+    _votes[_featuredKey(p)] = '$option|${PollMonth.current().key}';
+    _saveVotes();
+    notifyListeners();
+    return true;
+  }
+
+  /// Votes per option cast in [month], including this user's vote.
+  List<int> featuredVotesIn(FeaturedPoll p, PollMonth month) {
+    final votes = p.votesIn(month);
+    final mine = featuredChoice(p);
+    if (mine != null && featuredVoteMonth(p) == month) votes[mine] += 1;
+    return votes;
+  }
+
+  /// Cumulative votes per option over the poll so far.
+  List<int> featuredTotals(FeaturedPoll p) {
+    final totals = List.filled(p.options.length, 0);
+    for (final m in p.months) {
+      final v = featuredVotesIn(p, m);
+      for (var i = 0; i < totals.length; i++) {
+        totals[i] += v[i];
+      }
+    }
+    return totals;
+  }
+
+  // --- Saved candidates and settings. ---
 
   bool isSaved(String candidateId) => _saved.contains(candidateId);
   List<String> get savedCandidates => _saved.toList();
 
   void toggleSaved(String candidateId) {
     if (!_saved.remove(candidateId)) _saved.add(candidateId);
-    _prefs.setStringList('saved', _saved.toList());
+    _prefs.setStringList(_savedKey, _saved.toList());
     notifyListeners();
   }
 

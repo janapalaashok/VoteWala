@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../data/ap_data.dart';
+import '../data/poll_month.dart';
 import '../data/poll_repository.dart';
 import '../l10n/strings.dart';
 import '../state/app_state.dart';
@@ -8,6 +9,7 @@ import '../theme.dart';
 import '../utils.dart';
 import '../widgets/common.dart';
 import 'constituency_list_screen.dart';
+import 'results_screen.dart';
 
 /// Simplified district outlines as (longitude, latitude) points.
 const _outlines = <String, List<(double, double)>>{
@@ -48,6 +50,7 @@ class ApMapScreen extends StatefulWidget {
 
 class _ApMapScreenState extends State<ApMapScreen> {
   ElectionType _type = ElectionType.mla;
+  PollMonth _month = PollMonth.current();
   String _query = '';
   String? _selected;
 
@@ -59,7 +62,8 @@ class _ApMapScreenState extends State<ApMapScreen> {
   Widget build(BuildContext context) {
     final state = AppScope.of(context);
     final te = context.isTelugu;
-    final summaries = {for (final d in ApData.districts) d.id: state.districtSummary(d, _type)};
+    final summaries = {for (final d in ApData.districts) d.id: state.districtSummary(d, _type, month: _month)};
+    final stateTally = SeatTally(state.snapshots(_type, month: _month));
     final q = _query.trim().toLowerCase();
     final matching = ApData.districts
         .where((d) =>
@@ -82,6 +86,8 @@ class _ApMapScreenState extends State<ApMapScreen> {
               onChanged: (i) => setState(() => _type = ElectionType.values[i]),
             ),
             const SizedBox(height: 12),
+            MonthSelector(month: _month, onChanged: (m) => setState(() => _month = m)),
+            const SizedBox(height: 12),
             SearchField(hint: context.tr('searchConstituency'), onChanged: (v) => setState(() => _query = v)),
             const SizedBox(height: 12),
             AspectRatio(
@@ -97,7 +103,10 @@ class _ApMapScreenState extends State<ApMapScreen> {
                     size: box.biggest,
                     painter: _MapPainter(
                       paths: paths,
-                      colors: {for (final e in summaries.entries) e.key: AppColors.race(e.value.status)},
+                      colors: {
+                        for (final e in summaries.entries)
+                          e.key: e.value.tally.leader == null ? AppColors.grey : groupColor(e.value.tally.leader!),
+                      },
                       labels: {for (final d in ApData.districts) d.id: d.name(te)},
                       selected: _selected,
                       dimmed: q.isEmpty ? const {} : {
@@ -110,17 +119,12 @@ class _ApMapScreenState extends State<ApMapScreen> {
               }),
             ),
             const SizedBox(height: 8),
-            Wrap(spacing: 14, runSpacing: 6, alignment: WrapAlignment.center, children: [
-              for (final s in RaceStatus.values)
-                Row(mainAxisSize: MainAxisSize.min, children: [
-                  Container(
-                    width: 12,
-                    height: 12,
-                    decoration: BoxDecoration(color: AppColors.race(s), borderRadius: BorderRadius.circular(3)),
-                  ),
-                  const SizedBox(width: 6),
-                  Text(context.tr(s.name), style: const TextStyle(fontSize: 12)),
-                ]),
+            AppCard(child: SeatTallyView(stateTally, majority: ApData.of(_type).length ~/ 2 + 1)),
+            const SizedBox(height: 4),
+            Row(mainAxisAlignment: MainAxisAlignment.end, children: [
+              const PartyDot(AppColors.grey, size: 12),
+              const SizedBox(width: 4),
+              Text(context.tr('tied'), style: const TextStyle(color: AppColors.muted, fontSize: 11.5)),
             ]),
             if (selected != null) ...[
               const SizedBox(height: 14),
@@ -144,7 +148,7 @@ class _ApMapScreenState extends State<ApMapScreen> {
                             onTap: () => _openDistrict(d),
                             padding: const EdgeInsets.all(10),
                             child: Column(children: [
-                              Blob(color: s.leadingParty.color, seed: d.firstAc * 3, size: 44),
+                              SeatDonut(s.tally, size: 44),
                               const SizedBox(height: 8),
                               Text(d.name(te),
                                   maxLines: 1,
@@ -173,41 +177,30 @@ class _SelectedDistrictCard extends StatelessWidget {
   final VoidCallback onOpen;
 
   @override
-  Widget build(BuildContext context) {
-    final te = context.isTelugu;
-    final p = summary.leadingParty;
-    return AppCard(
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(children: [
-          Expanded(
-            child: Text(summary.district.name(te), style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
-          ),
-          StatusBadge(label: context.tr(summary.status.name), color: AppColors.race(summary.status)),
-        ]),
-        const SizedBox(height: 8),
-        Row(children: [
-          PartySymbolBadge(p, size: 30),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              '${p.short} ${context.tr('leading')} · +${(summary.margin * 100).toStringAsFixed(1)}% · '
-              '${formatCompact(summary.total)} ${context.tr('votes')}',
-              style: const TextStyle(color: AppColors.muted),
+  Widget build(BuildContext context) => AppCard(
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          Row(children: [
+            SeatDonut(summary.tally, size: 40),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(summary.district.name(context.isTelugu),
+                  style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
+            ),
+            Text('${formatCompact(summary.tally.votes)} ${context.tr('votes')}',
+                style: const TextStyle(color: AppColors.muted, fontSize: 12)),
+          ]),
+          const SizedBox(height: 12),
+          SeatTallyView(summary.tally),
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton.icon(
+              onPressed: onOpen,
+              icon: const Icon(Icons.chevron_right),
+              label: Text(context.tr('openConstituencies')),
             ),
           ),
         ]),
-        const SizedBox(height: 10),
-        Align(
-          alignment: Alignment.centerRight,
-          child: TextButton.icon(
-            onPressed: onOpen,
-            icon: const Icon(Icons.chevron_right),
-            label: Text(context.tr('openConstituencies')),
-          ),
-        ),
-      ]),
-    );
-  }
+      );
 }
 
 class _MapPainter extends CustomPainter {

@@ -5,6 +5,7 @@ import '../data/ap_data.dart';
 import '../data/poll_repository.dart';
 import '../l10n/strings.dart';
 import '../theme.dart';
+import '../utils.dart';
 import 'painters.dart';
 
 bool isWide(BuildContext context) => MediaQuery.sizeOf(context).width >= 900;
@@ -179,22 +180,11 @@ class LiveBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => closed
-      ? StatusBadge(label: context.tr('pollClosed'), color: AppColors.muted, icon: Icons.lock)
+      ? StatusBadge(label: context.tr('closed'), color: AppColors.muted, icon: Icons.lock)
       : StatusBadge(label: context.tr(long ? 'livePoll' : 'live'));
 }
 
-class Blob extends StatelessWidget {
-  const Blob({super.key, required this.color, required this.seed, this.size = 34});
-
-  final Color color;
-  final int seed;
-  final double size;
-
-  @override
-  Widget build(BuildContext context) =>
-      SizedBox.square(dimension: size, child: CustomPaint(painter: BlobPainter(color, seed)));
-}
-
+/// Candidate photo; falls back to the party symbol on the party colour.
 class CandidateAvatar extends StatelessWidget {
   const CandidateAvatar(this.candidate, {super.key, this.size = 40});
 
@@ -202,23 +192,54 @@ class CandidateAvatar extends StatelessWidget {
   final double size;
 
   @override
-  Widget build(BuildContext context) => Container(
-        width: size,
-        height: size,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: candidate.party.color.withValues(alpha: 0.14),
-          border: Border.all(color: candidate.party.color, width: 2),
-        ),
-        child: Icon(Icons.person, size: size * 0.62, color: const Color(0xFF59606E)),
-      );
+  Widget build(BuildContext context) =>
+      PersonAvatar(photoUrl: candidate.photoUrl, party: candidate.party, size: size);
+}
+
+class PersonAvatar extends StatelessWidget {
+  const PersonAvatar({super.key, required this.photoUrl, required this.party, this.size = 40, this.square = false});
+
+  final String? photoUrl;
+  final Party party;
+  final double size;
+  final bool square;
+
+  @override
+  Widget build(BuildContext context) {
+    final fallback = Container(
+      color: party.color.withValues(alpha: 0.16),
+      alignment: Alignment.center,
+      child: PartySymbolBadge(party, size: size * 0.78, plain: true),
+    );
+    final radius = square ? BorderRadius.circular(12) : BorderRadius.circular(size);
+    return Container(
+      width: size,
+      height: square ? size * 1.18 : size,
+      decoration: BoxDecoration(borderRadius: radius, border: Border.all(color: party.color, width: 2)),
+      child: ClipRRect(
+        borderRadius: radius,
+        child: photoUrl == null
+            ? fallback
+            : Image.network(
+                photoUrl!,
+                fit: BoxFit.cover,
+                alignment: Alignment.topCenter,
+                errorBuilder: (_, _, _) => fallback,
+                loadingBuilder: (_, child, progress) => progress == null ? child : fallback,
+              ),
+      ),
+    );
+  }
 }
 
 class PartySymbolBadge extends StatelessWidget {
-  const PartySymbolBadge(this.party, {super.key, this.size = 40});
+  const PartySymbolBadge(this.party, {super.key, this.size = 40, this.plain = false});
 
   final Party party;
   final double size;
+
+  /// Symbol only, without the round badge background.
+  final bool plain;
 
   @override
   Widget build(BuildContext context) {
@@ -228,8 +249,10 @@ class PartySymbolBadge extends StatelessWidget {
       PartySymbol.fan => SizedBox.square(dimension: inner, child: const CustomPaint(painter: FanPainter())),
       PartySymbol.glass => SizedBox.square(dimension: inner, child: const CustomPaint(painter: GlassPainter())),
       PartySymbol.lotus => Icon(Icons.local_florist, size: inner, color: const Color(0xFFE8562A)),
-      PartySymbol.independent => Icon(Icons.how_to_vote_outlined, size: inner, color: AppColors.blue),
+      PartySymbol.hand => Icon(Icons.back_hand, size: inner, color: const Color(0xFF138A5E)),
+      PartySymbol.other => Icon(Icons.how_to_vote_outlined, size: inner, color: AppColors.muted),
     };
+    if (plain) return SizedBox.square(dimension: size, child: Center(child: symbol));
     final filled = party.symbol == PartySymbol.bicycle;
     return Container(
       width: size,
@@ -242,6 +265,138 @@ class PartySymbolBadge extends StatelessWidget {
       ),
       child: symbol,
     );
+  }
+}
+
+/// Solid circle in a party colour.
+class PartyDot extends StatelessWidget {
+  const PartyDot(this.color, {super.key, this.size = 30});
+
+  final Color color;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          color: color,
+          shape: BoxShape.circle,
+          border: Border.all(color: Colors.white, width: 2),
+          boxShadow: const [BoxShadow(color: Color(0x22000000), blurRadius: 3)],
+        ),
+      );
+}
+
+Color groupColor(String group) => partyById(group).color;
+
+String groupLabel(BuildContext context, String group) =>
+    group == 'oth' ? context.tr('others') : partyById(group).short;
+
+/// Circle split by seats per party (party representation of a district).
+class SeatDonut extends StatelessWidget {
+  const SeatDonut(this.tally, {super.key, this.size = 40});
+
+  final SeatTally tally;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) => SizedBox.square(
+        dimension: size,
+        child: CustomPaint(
+          painter: _DonutPainter([for (final g in seatGroups) (groupColor(g), tally.seats[g]!)]),
+          child: Center(
+            child: Text('${tally.total}',
+                style: TextStyle(fontSize: size * 0.3, fontWeight: FontWeight.w800, color: AppColors.ink)),
+          ),
+        ),
+      );
+}
+
+class _DonutPainter extends CustomPainter {
+  _DonutPainter(this.parts);
+
+  final List<(Color, int)> parts;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final total = parts.fold(0, (a, p) => a + p.$2);
+    final stroke = size.width * 0.2;
+    final rect = (Offset.zero & size).deflate(stroke / 2);
+    final paint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = stroke;
+    if (total == 0) {
+      canvas.drawArc(rect, 0, 6.2832, false, paint..color = AppColors.grey);
+      return;
+    }
+    var start = -1.5708;
+    for (final (color, n) in parts) {
+      if (n == 0) continue;
+      final sweep = 6.2832 * n / total;
+      canvas.drawArc(rect, start, sweep, false, paint..color = color);
+      start += sweep;
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _DonutPainter old) => true;
+}
+
+/// Party seat counts with a stacked bar, e.g. "TDP 98 · YSRCP 60 · ...".
+class SeatTallyView extends StatelessWidget {
+  const SeatTallyView(this.tally, {super.key, this.majority});
+
+  final SeatTally tally;
+  final int? majority;
+
+  @override
+  Widget build(BuildContext context) {
+    final total = tally.total;
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      Wrap(spacing: 8, runSpacing: 8, children: [
+        for (final g in seatGroups)
+          Container(
+            padding: const EdgeInsets.fromLTRB(6, 6, 12, 6),
+            decoration: BoxDecoration(
+              color: groupColor(g).withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: groupColor(g).withValues(alpha: 0.5)),
+            ),
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+              PartyDot(groupColor(g), size: 16),
+              const SizedBox(width: 6),
+              Text(groupLabel(context, g), style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+              const SizedBox(width: 6),
+              Text('${tally.seats[g]}', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+            ]),
+          ),
+      ]),
+      const SizedBox(height: 12),
+      LayoutBuilder(builder: (context, box) => Stack(clipBehavior: Clip.none, children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(6),
+              child: SizedBox(
+                height: 14,
+                child: Row(children: [
+                  for (final g in seatGroups)
+                    if (tally.seats[g]! > 0) Expanded(flex: tally.seats[g]!, child: Container(color: groupColor(g))),
+                ]),
+              ),
+            ),
+            if (majority != null && total > 0)
+              Positioned(
+                left: box.maxWidth * majority! / total - 1,
+                top: -4,
+                child: Container(width: 2, height: 22, color: AppColors.ink),
+              ),
+          ])),
+      if (majority != null) ...[
+        const SizedBox(height: 8),
+        Text(context.tr('majority', {'n': '$majority'}),
+            style: const TextStyle(color: AppColors.muted, fontSize: 12)),
+      ],
+    ]);
   }
 }
 
@@ -287,11 +442,15 @@ class ResultRow extends StatelessWidget {
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Row(children: [
               Expanded(
-                child: Text('${c.name(context.isTelugu)} - ${c.party.short}',
+                child: Text(c.isPerson ? '${c.name(context.isTelugu)} - ${c.party.short}' : c.name(context.isTelugu),
                     style: TextStyle(fontWeight: highlight ? FontWeight.w700 : FontWeight.w600, fontSize: 14)),
               ),
-              Text('${(share * 100).toStringAsFixed(1)}%',
-                  style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+              Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+                Text('${(share * 100).toStringAsFixed(1)}%',
+                    style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+                Text('${formatIndian(snapshot.votes[index])} ${context.tr('votes')}',
+                    style: const TextStyle(color: AppColors.muted, fontSize: 11.5)),
+              ]),
             ]),
             const SizedBox(height: 8),
             ClipRRect(
@@ -395,7 +554,7 @@ class ConstituencyTile extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         child: Row(children: [
-          Blob(color: snapshot.candidates[snapshot.leader].party.color, seed: c.no + (c.isMla ? 0 : 500)),
+          PartyDot(snapshot.leadingParty.color),
           const SizedBox(width: 14),
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -405,7 +564,6 @@ class ConstituencyTile extends StatelessWidget {
             ]),
           ),
           if (voted) const Icon(Icons.check_circle, color: AppColors.green, size: 20),
-          if (snapshot.closed) const Icon(Icons.lock_outline, color: AppColors.muted, size: 18),
           const SizedBox(width: 4),
           const Icon(Icons.chevron_right, color: AppColors.muted),
         ]),

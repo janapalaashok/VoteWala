@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../data/ap_data.dart';
+import '../data/featured_polls.dart';
+import '../data/poll_month.dart';
 import '../data/poll_repository.dart';
 import '../l10n/strings.dart';
 import '../state/app_state.dart';
@@ -11,9 +13,8 @@ import '../widgets/painters.dart';
 import 'ap_map_screen.dart';
 import 'browse_screens.dart';
 import 'constituency_detail_screen.dart';
+import 'featured_poll_screen.dart';
 import 'main_shell.dart';
-
-const featuredPollIds = ['mla-21', 'mla-87', 'mla-37', 'mla-175', 'mla-129', 'mp-12', 'mp-4', 'mla-50'];
 
 void openConstituency(BuildContext context, Constituency c, {int tab = 0}) => Navigator.of(context).push(
       MaterialPageRoute<void>(builder: (_) => ConstituencyDetailScreen(constituency: c, initialTab: tab)),
@@ -87,11 +88,10 @@ class HomeScreen extends StatelessWidget {
                   ),
                 ]),
                 const SizedBox(height: 12),
-                SectionHeader(
-                  context.tr('featuredPolls'),
-                  action: context.tr('viewAll'),
-                  onAction: () => push(const LivePollsScreen()),
-                ),
+                const SizedBox(height: 4),
+                const _MonthlyVotesCard(),
+                const SizedBox(height: 8),
+                SectionHeader(context.tr('featuredPolls')),
                 const _FeaturedPolls(),
               ]),
             ),
@@ -252,18 +252,64 @@ class _QuickAction extends StatelessWidget {
       );
 }
 
+class _MonthlyVotesCard extends StatelessWidget {
+  const _MonthlyVotesCard();
+
+  @override
+  Widget build(BuildContext context) {
+    final state = AppScope.of(context);
+    final te = context.isTelugu;
+    final month = PollMonth.current();
+    final shell = ShellScope.maybeOf(context);
+    Widget row(ElectionType type, String label, int tab) {
+      final vote = state.monthlyVote(type);
+      return InkWell(
+        onTap: () => vote == null ? shell?.go(tab) : openConstituency(context, vote.constituency),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 6),
+          child: Row(children: [
+            Icon(vote == null ? Icons.how_to_vote_outlined : Icons.check_circle,
+                color: vote == null ? AppColors.orange : AppColors.green, size: 22),
+            const SizedBox(width: 10),
+            SizedBox(width: 44, child: Text(label, style: const TextStyle(fontWeight: FontWeight.w800))),
+            Expanded(
+              child: Text(
+                vote == null
+                    ? context.tr('voteAvailable')
+                    : context.tr('voteUsedIn', {'name': '${vote.name(te)} (${vote.constituency.name(te)})'}),
+                style: TextStyle(color: vote == null ? AppColors.orange : AppColors.ink, fontWeight: FontWeight.w500),
+              ),
+            ),
+            const Icon(Icons.chevron_right, color: AppColors.muted),
+          ]),
+        ),
+      );
+    }
+
+    return AppCard(
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(context.tr('yourVotesMonth', {'month': month.label(te)}),
+            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+        const SizedBox(height: 6),
+        row(ElectionType.mla, 'MLA', ShellTab.mla),
+        row(ElectionType.mp, 'MP', ShellTab.mp),
+        const SizedBox(height: 6),
+        Text(context.tr('monthlyRule'), style: const TextStyle(color: AppColors.muted, fontSize: 12, height: 1.4)),
+      ]),
+    );
+  }
+}
+
 class _FeaturedPolls extends StatelessWidget {
   const _FeaturedPolls();
 
   @override
   Widget build(BuildContext context) {
-    final state = AppScope.of(context);
-    final polls = [for (final id in featuredPollIds) state.snapshot(ApData.byId(id))];
     return LayoutBuilder(builder: (context, box) {
-      final columns = box.maxWidth >= 700 ? 2 : 1;
+      final columns = box.maxWidth >= 900 ? 3 : (box.maxWidth >= 600 ? 2 : 1);
       final w = (box.maxWidth - (columns - 1) * 12) / columns;
       return Wrap(spacing: 12, runSpacing: 12, children: [
-        for (final p in polls) SizedBox(width: w, child: PollCard(snapshot: p)),
+        for (final p in featuredPolls) SizedBox(width: w, child: FeaturedPollCard(poll: p)),
       ]);
     });
   }
@@ -280,12 +326,13 @@ class PollCard extends StatelessWidget {
     final c = snapshot.constituency;
     final te = context.isTelugu;
     final leader = snapshot.candidates[snapshot.leader];
-    final voted = AppScope.of(context).choiceIndex(c) != null;
+    final state = AppScope.of(context);
+    final voted = state.choiceIndex(c) != null;
     return AppCard(
       onTap: () => openConstituency(context, c),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
-          Blob(color: leader.party.color, seed: c.no + (c.isMla ? 0 : 500), size: 38),
+          PartyDot(leader.party.color, size: 34),
           const SizedBox(width: 12),
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -304,13 +351,13 @@ class PollCard extends StatelessWidget {
         Row(children: [
           Expanded(
             child: Text(
-              '${leader.party.short} ${context.tr('leading')} · ${formatCompact(snapshot.total)} ${context.tr('votes')}',
+              '${leader.party.shortName(te)} ${context.tr('leading')} · ${formatCompact(snapshot.total)} ${context.tr('votes')}',
               style: const TextStyle(fontSize: 12.5, color: AppColors.muted),
             ),
           ),
           if (voted)
             const Icon(Icons.check_circle, color: AppColors.green, size: 22)
-          else if (!snapshot.closed)
+          else if (!snapshot.closed && state.canVote(c))
             SizedBox(
               height: 34,
               child: FilledButton(

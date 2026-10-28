@@ -5,49 +5,31 @@ import '../data/poll_repository.dart';
 import '../l10n/strings.dart';
 import '../state/app_state.dart';
 import '../theme.dart';
+import '../utils.dart';
 import '../widgets/common.dart';
+import 'constituency_detail_screen.dart';
+import 'home_screen.dart';
 
+const _eciResultsUrl = 'https://results.eci.gov.in/';
 const _eciAffidavitUrl = 'https://affidavit.eci.gov.in/';
-const _ceoAndhraUrl = 'https://ceoandhra.nic.in/';
 
-class CandidateDetailScreen extends StatefulWidget {
+class CandidateDetailScreen extends StatelessWidget {
   const CandidateDetailScreen({super.key, required this.candidate});
 
   final Candidate candidate;
 
-  @override
-  State<CandidateDetailScreen> createState() => _CandidateDetailScreenState();
-}
-
-class _CandidateDetailScreenState extends State<CandidateDetailScreen> with SingleTickerProviderStateMixin {
-  late final TabController _tabs = TabController(length: 4, vsync: this)..addListener(() => setState(() {}));
-
-  @override
-  void dispose() {
-    _tabs.dispose();
-    super.dispose();
-  }
-
-  Future<void> _open(String url) async {
-    await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
-  }
+  Future<void> _open(String url) => launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
 
   @override
   Widget build(BuildContext context) {
-    final cand = widget.candidate;
+    final cand = candidate;
     final c = cand.constituency;
     final te = context.isTelugu;
     final state = AppScope.of(context);
     final saved = state.isSaved(cand.id);
-    final name = cand.name(te);
-
-    final tabBody = switch (_tabs.index) {
-      0 => context.tr('aboutCandidateBody', {'name': name, 'constituency': c.name(te), 'party': cand.party.name(te)}),
-      1 => context.tr('historyBody'),
-      2 => context.tr('assetsBody', {'amount': cand.assetsCrore.toStringAsFixed(1)}),
-      _ => context.tr('casesBody', {'n': '${cand.criminalCases}'}),
-    };
-    final tabTitle = [context.tr('aboutCandidate'), context.tr('electionHistory'), context.tr('assets'), context.tr('cases')];
+    final r = cand.result2024;
+    final won = cand.role == CandidateRole.won2024;
+    final opponent = Candidate(c, won ? 1 : 0);
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -69,113 +51,101 @@ class _CandidateDetailScreenState extends State<CandidateDetailScreen> with Sing
           maxWidth: 640,
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Container(
-                width: 110,
-                height: 128,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFEFF1F4),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppColors.border),
-                ),
-                child: const Icon(Icons.person, size: 84, color: Color(0xFF9AA1AD)),
-              ),
+              PersonAvatar(photoUrl: cand.photoUrl, party: cand.party, size: 112, square: true),
               const SizedBox(width: 20),
               PartySymbolBadge(cand.party, size: 64),
             ]),
             const SizedBox(height: 16),
-            Text(name, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800)),
-            Text(cand.name(!te), style: const TextStyle(fontSize: 16)),
+            Text(cand.name(te), style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800)),
             const SizedBox(height: 4),
             Text('${cand.party.name(te)} (${cand.party.short})', style: const TextStyle(color: AppColors.muted)),
-            const SizedBox(height: 18),
-            _Grid(children: [
-              InfoField(label: context.tr('constituency'), value: Text(c.name(te))),
-              InfoField(
-                  label: context.tr('electionType'), value: Text(context.tr(c.isMla ? 'assemblyMla' : 'parliamentMp'))),
-              InfoField(
-                label: context.tr('nominationStatus'),
-                value: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(color: const Color(0xFFE8F6EC), borderRadius: BorderRadius.circular(6)),
-                  child: Text(context.tr('contesting'),
-                      style: const TextStyle(color: AppColors.green, fontSize: 12.5, fontWeight: FontWeight.w700)),
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: (won ? AppColors.green : AppColors.muted).withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                won ? '${context.tr('won2024')} · ${roleLabel(context, cand)}' : context.tr('runnerUp2024'),
+                style: TextStyle(
+                  color: won ? AppColors.green : AppColors.ink,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 12.5,
                 ),
               ),
-              InfoField(label: context.tr('education'), value: Text(cand.education)),
-              InfoField(label: context.tr('totalAssets'), value: Text('₹ ${cand.assetsCrore.toStringAsFixed(1)} Crore')),
-              InfoField(
-                label: context.tr('criminalCases'),
-                value: Text(
-                  cand.criminalCases == 0 ? context.tr('noCases') : context.tr('nCases', {'n': '${cand.criminalCases}'}),
-                  style: TextStyle(color: cand.criminalCases == 0 ? AppColors.green : AppColors.red),
+            ),
+            const SizedBox(height: 18),
+            Row(children: [
+              Expanded(child: InfoField(label: context.tr('constituency'), value: Text(c.name(te)))),
+              Expanded(
+                child: InfoField(
+                  label: context.tr('electionType'),
+                  value: Text(context.tr(c.isMla ? 'assemblyMla' : 'parliamentMp')),
                 ),
               ),
             ]),
-            const SizedBox(height: 18),
+            const SizedBox(height: 16),
+            Row(children: [
+              Expanded(
+                child: InfoField(
+                  label: context.tr('votes2024', {'n': ''}).trim(),
+                  value: Text(formatIndian(cand.contestant!.votes)),
+                ),
+              ),
+              Expanded(
+                child: InfoField(
+                  label: context.tr('result2024'),
+                  value: Text(
+                    context.tr(won ? 'wonBy' : 'lostBy', {'n': formatIndian(r.margin)}),
+                    style: TextStyle(color: won ? AppColors.green : AppColors.red),
+                  ),
+                ),
+              ),
+            ]),
+            const SizedBox(height: 16),
+            AppCard(
+              onTap: () => Navigator.of(context)
+                  .push(MaterialPageRoute<void>(builder: (_) => CandidateDetailScreen(candidate: opponent))),
+              child: Row(children: [
+                CandidateAvatar(opponent, size: 36),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    '${context.tr(won ? 'runnerUp2024' : 'won2024')}: ${opponent.name(te)} (${opponent.party.short})',
+                    style: const TextStyle(fontSize: 13),
+                  ),
+                ),
+                const Icon(Icons.chevron_right, color: AppColors.muted),
+              ]),
+            ),
+            const SizedBox(height: 16),
             Row(children: [
               Expanded(
                 child: _LinkButton(
-                  icon: Icons.open_in_new,
-                  label: context.tr('viewAffidavit'),
-                  onTap: () => _open(_eciAffidavitUrl),
-                ),
+                    icon: Icons.open_in_new, label: context.tr('eciResults'), onTap: () => _open(_eciResultsUrl)),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: _LinkButton(
-                  icon: Icons.verified_outlined,
-                  label: context.tr('officialSource'),
-                  onTap: () => _open(_ceoAndhraUrl),
-                ),
+                    icon: Icons.description_outlined,
+                    label: context.tr('affidavits'),
+                    onTap: () => _open(_eciAffidavitUrl)),
               ),
             ]),
             const SizedBox(height: 12),
-            Row(children: [
-              const Icon(Icons.info_outline, size: 14, color: AppColors.muted),
-              const SizedBox(width: 6),
-              Expanded(
-                child: Text(context.tr('sampleData'), style: const TextStyle(color: AppColors.muted, fontSize: 12)),
-              ),
-            ]),
-            const SizedBox(height: 12),
-            TabBar(
-              controller: _tabs,
-              isScrollable: true,
-              tabAlignment: TabAlignment.start,
-              tabs: [
-                Tab(text: context.tr('about')),
-                Tab(text: context.tr('electionHistory')),
-                Tab(text: context.tr('assets')),
-                Tab(text: context.tr('cases')),
-              ],
+            OutlinedButton.icon(
+              onPressed: () => openConstituency(context, c),
+              icon: const Icon(Icons.how_to_vote_outlined),
+              label: Text('${c.name(te)} ${context.tr('pollType')}'),
             ),
             const SizedBox(height: 16),
-            Text(tabTitle[_tabs.index], style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
-            const SizedBox(height: 8),
-            Text(tabBody, style: const TextStyle(color: Color(0xFF4B5160), height: 1.5)),
+            Text(context.tr('dataCredit'), style: const TextStyle(color: AppColors.muted, fontSize: 11.5, height: 1.4)),
           ]),
         ),
       ]),
     );
   }
-}
-
-class _Grid extends StatelessWidget {
-  const _Grid({required this.children});
-
-  final List<Widget> children;
-
-  @override
-  Widget build(BuildContext context) => Column(children: [
-        for (var i = 0; i < children.length; i += 2)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 16),
-            child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Expanded(child: children[i]),
-              Expanded(child: i + 1 < children.length ? children[i + 1] : const SizedBox()),
-            ]),
-          ),
-      ]);
 }
 
 class _LinkButton extends StatelessWidget {

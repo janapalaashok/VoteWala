@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 
-import '../data/ap_data.dart';
 import '../data/poll_repository.dart';
 import '../l10n/strings.dart';
 import '../state/app_state.dart';
 import '../theme.dart';
-import '../utils.dart';
 import '../widgets/common.dart';
 import 'constituency_detail_screen.dart';
 import 'home_screen.dart';
@@ -85,22 +83,22 @@ class MyParticipationScreen extends StatelessWidget {
                 separatorBuilder: (_, _) => const SizedBox(height: 10),
                 itemBuilder: (_, i) {
                   final v = history[i];
-                  final c = ApData.byId(v.pollId);
-                  final cand = Candidate.byId(v.candidateId);
+                  final cand = v.candidate;
+                  final c = cand.constituency;
                   return AppCard(
                     onTap: () => openConstituency(context, c),
                     child: Row(children: [
-                      PartySymbolBadge(cand.party, size: 40),
+                      CandidateAvatar(cand, size: 42),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                           Text('${c.name(te)} · ${c.isMla ? 'MLA' : 'MP'}',
                               style: const TextStyle(fontWeight: FontWeight.w700)),
-                          Text('${cand.name(te)} (${cand.party.short})',
+                          Text('${cand.name(te)} (${cand.party.shortName(te)})',
                               style: const TextStyle(color: AppColors.muted)),
                         ]),
                       ),
-                      Text(formatDate(v.day), style: const TextStyle(color: AppColors.muted, fontSize: 12)),
+                      Text(v.month.label(te), style: const TextStyle(color: AppColors.muted, fontSize: 12)),
                     ]),
                   );
                 },

@@ -31,6 +31,13 @@ class _SearchScreenState extends State<SearchScreen> {
     final constituencies = q.isEmpty
         ? const <Constituency>[]
         : [...ApData.mp, ...ApData.mla].where((c) => c.en.toLowerCase().contains(q) || c.te.contains(q)).toList();
+    final people = q.length < 3
+        ? const <Candidate>[]
+        : [
+            for (final c in [...ApData.mla, ...ApData.mp])
+              for (final cand in PollRepository.candidates(c))
+                if (cand.isPerson && cand.name(false).toLowerCase().contains(q)) cand,
+          ];
 
     return Scaffold(
       appBar: AppBar(
@@ -47,7 +54,7 @@ class _SearchScreenState extends State<SearchScreen> {
       body: PageBody(
         child: q.isEmpty
             ? const SizedBox()
-            : districts.isEmpty && constituencies.isEmpty
+            : districts.isEmpty && constituencies.isEmpty && people.isEmpty
                 ? EmptyState(icon: Icons.search_off, message: context.tr('noMatches'))
                 : ListView(children: [
                     for (final d in districts)
@@ -66,6 +73,11 @@ class _SearchScreenState extends State<SearchScreen> {
                         title: Text(c.name(te), style: const TextStyle(fontWeight: FontWeight.w600)),
                         subtitle: Text('${c.isMla ? 'MLA' : 'MP'} · ${c.name(!te)}'),
                         onTap: () => openConstituency(context, c),
+                      ),
+                    for (final cand in people)
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(12, 4, 12, 4),
+                        child: CandidateListCard(candidate: cand, showConstituency: true),
                       ),
                   ]),
       ),
@@ -87,10 +99,7 @@ class _LivePollsScreenState extends State<LivePollsScreen> {
   @override
   Widget build(BuildContext context) {
     final state = AppScope.of(context);
-    final polls = [
-      for (final c in ApData.of(_type))
-        if (!state.snapshot(c).closed) state.snapshot(c),
-    ]..sort((a, b) => b.total.compareTo(a.total));
+    final polls = state.snapshots(_type)..sort((a, b) => b.total.compareTo(a.total));
     return Scaffold(
       appBar: AppBar(title: Text(context.tr('livePolls'))),
       body: PageBody(
@@ -136,7 +145,7 @@ class _CandidatesDirectoryScreenState extends State<CandidatesDirectoryScreen> {
       for (final c in ApData.of(_type))
         if (c.matches(_query))
           for (final cand in PollRepository.candidates(c))
-            if (_partyId == null || cand.party.id == _partyId) cand,
+            if (cand.isPerson && (_partyId == null || cand.party.group == _partyId)) cand,
     ];
     return Scaffold(
       appBar: AppBar(title: Text(context.tr('candidates'))),
@@ -160,14 +169,15 @@ class _CandidatesDirectoryScreenState extends State<CandidatesDirectoryScreen> {
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               children: [
-                for (final p in [null, ...parties])
+                for (final g in [null, ...seatGroups])
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 4),
                     child: ChoiceChip(
-                      label: Text(p?.short ?? context.tr('all')),
-                      selected: _partyId == p?.id,
+                      avatar: g == null ? null : PartyDot(groupColor(g), size: 14),
+                      label: Text(g == null ? context.tr('all') : groupLabel(context, g)),
+                      selected: _partyId == g,
                       selectedColor: AppColors.orange.withValues(alpha: 0.15),
-                      onSelected: (_) => setState(() => _partyId = p?.id),
+                      onSelected: (_) => setState(() => _partyId = g),
                     ),
                   ),
               ],

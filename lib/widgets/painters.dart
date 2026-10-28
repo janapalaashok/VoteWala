@@ -225,39 +225,6 @@ class HeroScenePainter extends CustomPainter {
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
-/// Irregular region-shaped blob used as a constituency marker.
-class BlobPainter extends CustomPainter {
-  const BlobPainter(this.color, this.seed);
-
-  final Color color;
-  final int seed;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final rnd = Random(seed);
-    final c = size.center(Offset.zero);
-    final r = size.shortestSide / 2;
-    const n = 8;
-    final pts = [
-      for (var i = 0; i < n; i++)
-        c + Offset.fromDirection(2 * pi * i / n + 0.3, r * (0.68 + rnd.nextDouble() * 0.32)),
-    ];
-    final path = Path();
-    for (var i = 0; i < n; i++) {
-      final a = pts[i], b = pts[(i + 1) % n];
-      final mid = (a + b) / 2;
-      if (i == 0) path.moveTo((pts[n - 1].dx + a.dx) / 2, (pts[n - 1].dy + a.dy) / 2);
-      path.quadraticBezierTo(a.dx, a.dy, mid.dx, mid.dy);
-    }
-    path.close();
-    canvas.drawPath(path, Paint()..color = color);
-    canvas.drawPath(path, Paint()..color = Colors.white.withValues(alpha: 0.18)..style = PaintingStyle.stroke..strokeWidth = 1);
-  }
-
-  @override
-  bool shouldRepaint(covariant BlobPainter old) => old.color != color || old.seed != seed;
-}
-
 /// Ceiling fan (YSRCP symbol).
 class FanPainter extends CustomPainter {
   const FanPainter();
