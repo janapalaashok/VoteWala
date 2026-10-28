@@ -24,44 +24,29 @@ class PageBody extends StatelessWidget {
       );
 }
 
+/// The official VoteWala logo (images in assets/brand, generated from brand/).
 class VoteWalaLogo extends StatelessWidget {
   const VoteWalaLogo({super.key, this.markSize = 56, this.horizontal = false, this.tagline = true});
 
+  /// Height of the ballot-box mark.
   final double markSize;
   final bool horizontal;
+
+  /// Without the tagline, the stacked logo shows the mark only (e.g. a nav rail).
   final bool tagline;
 
   @override
   Widget build(BuildContext context) {
-    final mark = SizedBox.square(dimension: markSize, child: const CustomPaint(painter: BallotMarkPainter()));
-    final fontSize = horizontal ? markSize * 0.5 : markSize * 0.42;
-    final word = Text.rich(
-      TextSpan(children: const [
-        TextSpan(text: 'Vote', style: TextStyle(color: AppColors.orange)),
-        TextSpan(text: 'wala', style: TextStyle(color: AppColors.green)),
-      ]),
-      style: TextStyle(fontSize: fontSize, fontWeight: FontWeight.w800, height: 1.05, letterSpacing: -0.5),
-    );
-    final tag = Row(mainAxisSize: MainAxisSize.min, children: [
-      Container(width: fontSize * 0.5, height: 1.5, color: AppColors.orange),
-      Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 6),
-        child: Text('Your Voice. Your Choice.',
-            style: TextStyle(fontSize: fontSize * 0.28, color: AppColors.ink, fontWeight: FontWeight.w500)),
-      ),
-      Container(width: fontSize * 0.5, height: 1.5, color: AppColors.green),
-    ]);
     if (horizontal) {
-      return Row(mainAxisSize: MainAxisSize.min, children: [
-        mark,
-        const SizedBox(width: 6),
-        Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-          word,
-          if (tagline) tag,
-        ]),
-      ]);
+      return Image.asset('assets/brand/logo.png', height: markSize, semanticLabel: 'VoteWala');
     }
-    return Column(mainAxisSize: MainAxisSize.min, children: [mark, const SizedBox(height: 4), word, if (tagline) tag]);
+    final mark = Image.asset('assets/brand/mark.png', height: markSize, semanticLabel: 'VoteWala');
+    if (!tagline) return mark;
+    return Column(mainAxisSize: MainAxisSize.min, children: [
+      mark,
+      SizedBox(height: markSize * 0.12),
+      Image.asset('assets/brand/wordmark.png', width: markSize * 1.9),
+    ]);
   }
 }
 

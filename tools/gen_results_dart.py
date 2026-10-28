@@ -22,12 +22,23 @@ for line in open(SRC, encoding="utf-8"):
         images[d["title"]] = d["url"].split("?")[0]
 
 
+# Extra photos found on Wikidata for candidates without a Wikipedia lead image.
+extra = {}
+try:
+    for line in open("tools/data/photos-extra.txt", encoding="utf-8"):
+        if line.startswith("PHOTO|"):
+            d = json.loads(line[6:])
+            extra[d["name"]] = d["url"]
+except FileNotFoundError:
+    pass
+
+
 def photo(cell):
     for href in cell["l"]:
         title = urllib.parse.unquote(href).replace("_", " ")
         if title in images:
             return images[title]
-    return None
+    return extra.get(cell["t"])
 
 
 def num(s):
@@ -64,7 +75,9 @@ for label, data in (("MLA", mla), ("MP", mp)):
     tally = collections.Counter(v["w"][1] for v in data.values())
     unknown = {v["w"][4] for v in data.values() if v["w"][1] == "oth"} | {v["r"][4] for v in data.values() if v["r"][1] == "oth"}
     photos = sum(1 for v in data.values() if v["w"][3])
-    print(label, dict(tally), "photos:", photos, "/", len(data), "other party labels:", unknown, file=sys.stderr)
+    rphotos = sum(1 for v in data.values() if v["r"][3])
+    print(label, dict(tally), "winner photos:", photos, "/", len(data), "runner-up photos:", rphotos,
+          "other party labels:", unknown, file=sys.stderr)
 
 assert collections.Counter(v["w"][1] for v in mla.values()) == {"tdp": 135, "jsp": 21, "bjp": 8, "ysrcp": 11}
 assert collections.Counter(v["w"][1] for v in mp.values()) == {"tdp": 16, "ysrcp": 4, "bjp": 3, "jsp": 2}

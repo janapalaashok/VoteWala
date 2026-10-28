@@ -16,6 +16,10 @@ import 'constituency_detail_screen.dart';
 import 'featured_poll_screen.dart';
 import 'main_shell.dart';
 
+/// Seats highlighted on the dashboard.
+const topMlaSeats = ['mla-129', 'mla-175', 'mla-37', 'mla-87', 'mla-157']; // Pulivendla, Kuppam, Pithapuram, Mangalagiri, Hindupur
+const topMpSeats = ['mp-4', 'mp-23', 'mp-21', 'mp-5', 'mp-12']; // Visakhapatnam, Tirupati, Kadapa, Anakapalli, Vijayawada
+
 void openConstituency(BuildContext context, Constituency c, {int tab = 0}) => Navigator.of(context).push(
       MaterialPageRoute<void>(builder: (_) => ConstituencyDetailScreen(constituency: c, initialTab: tab)),
     );
@@ -90,6 +94,14 @@ class HomeScreen extends StatelessWidget {
                 const SizedBox(height: 12),
                 const SizedBox(height: 4),
                 const _MonthlyVotesCard(),
+                const SizedBox(height: 8),
+                SectionHeader(context.tr('topMlaSeats'),
+                    action: context.tr('viewAll'), onAction: () => shell?.go(ShellTab.mla)),
+                const _TopSeats(ids: topMlaSeats),
+                const SizedBox(height: 8),
+                SectionHeader(context.tr('topMpSeats'),
+                    action: context.tr('viewAll'), onAction: () => shell?.go(ShellTab.mp)),
+                const _TopSeats(ids: topMpSeats),
                 const SizedBox(height: 8),
                 SectionHeader(context.tr('featuredPolls')),
                 const _FeaturedPolls(),
@@ -300,6 +312,24 @@ class _MonthlyVotesCard extends StatelessWidget {
   }
 }
 
+class _TopSeats extends StatelessWidget {
+  const _TopSeats({required this.ids});
+
+  final List<String> ids;
+
+  @override
+  Widget build(BuildContext context) {
+    final state = AppScope.of(context);
+    return LayoutBuilder(builder: (context, box) {
+      final columns = box.maxWidth >= 900 ? 3 : (box.maxWidth >= 600 ? 2 : 1);
+      final w = (box.maxWidth - (columns - 1) * 12) / columns;
+      return Wrap(spacing: 12, runSpacing: 10, children: [
+        for (final id in ids) SizedBox(width: w, child: PollCard(snapshot: state.snapshot(ApData.byId(id)))),
+      ]);
+    });
+  }
+}
+
 class _FeaturedPolls extends StatelessWidget {
   const _FeaturedPolls();
 
@@ -332,8 +362,15 @@ class PollCard extends StatelessWidget {
       onTap: () => openConstituency(context, c),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
-          PartyDot(leader.party.color, size: 34),
-          const SizedBox(width: 12),
+          SizedBox(
+            width: 66,
+            height: 42,
+            child: Stack(children: [
+              CandidateAvatar(snapshot.candidates[0], size: 42),
+              Positioned(left: 26, child: CandidateAvatar(snapshot.candidates[1], size: 42)),
+            ]),
+          ),
+          const SizedBox(width: 10),
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(c.name(te), style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
@@ -351,7 +388,8 @@ class PollCard extends StatelessWidget {
         Row(children: [
           Expanded(
             child: Text(
-              '${leader.party.shortName(te)} ${context.tr('leading')} · ${formatCompact(snapshot.total)} ${context.tr('votes')}',
+              '${leader.name(te)} (${leader.party.shortName(te)}) ${context.tr('leading')} · '
+              '${formatCompact(snapshot.total)} ${context.tr('votes')}',
               style: const TextStyle(fontSize: 12.5, color: AppColors.muted),
             ),
           ),

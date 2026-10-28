@@ -78,7 +78,7 @@ class _LoginScreenState extends State<LoginScreen> {
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 420),
               child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                const Center(child: VoteWalaLogo(markSize: 64, horizontal: true)),
+                const Center(child: VoteWalaLogo(markSize: 80, horizontal: true)),
                 const SizedBox(height: 36),
                 Text(context.tr('signInTitle'),
                     textAlign: TextAlign.center, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700)),

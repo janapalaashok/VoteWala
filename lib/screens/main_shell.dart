@@ -68,7 +68,7 @@ class _MainShellState extends State<MainShell> {
             labelType: extended ? NavigationRailLabelType.none : NavigationRailLabelType.all,
             leading: Padding(
               padding: const EdgeInsets.symmetric(vertical: 16),
-              child: VoteWalaLogo(markSize: 44, horizontal: extended, tagline: false),
+              child: VoteWalaLogo(markSize: extended ? 64 : 48, horizontal: extended, tagline: false),
             ),
             destinations: [
               for (final it in items)
