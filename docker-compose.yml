@@ -1,0 +1,42 @@
+# Local / single-server deployment.
+#   cp .env.example .env   # fill in secrets
+#   docker compose up -d db
+#   docker compose run --rm migrate
+#   docker compose up -d app
+services:
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: votewala
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-votewala}
+      POSTGRES_DB: votewala
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U votewala"]
+      interval: 5s
+      retries: 10
+
+  migrate:
+    build: { context: ., target: migrate }
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://votewala:${POSTGRES_PASSWORD:-votewala}@db:5432/votewala
+    depends_on:
+      db: { condition: service_healthy }
+    profiles: ["tools"]
+
+  app:
+    build: { context: ., target: runner }
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://votewala:${POSTGRES_PASSWORD:-votewala}@db:5432/votewala
+    ports:
+      - "3000:3000"
+    depends_on:
+      db: { condition: service_healthy }
+
+volumes:
+  pgdata:

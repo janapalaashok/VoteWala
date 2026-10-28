@@ -1,0 +1,12 @@
+node_modules
+.next
+out
+.env
+.env.local
+*.tsbuildinfo
+coverage
+# Generated from brand/VW.png by `npm run brand`
+public/brand/*.png
+src/app/favicon.ico
+src/app/icon.png
+src/app/apple-icon.png

@@ -1,0 +1,256 @@
+// VoteWala data model.
+// Integrity rules that matter for poll fairness are enforced by the database,
+// not only by application code:
+//   * one vote per user per poll            -> @@unique([pollId, userId]) on Vote
+//   * one account per verified mobile number -> @unique on User.phone
+//   * a vote's option must belong to its poll -> composite FK (optionId, pollId)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum ConstituencyType {
+  ASSEMBLY // MLA
+  PARLIAMENTARY // MP (Lok Sabha)
+}
+
+enum Reservation {
+  GEN
+  SC
+  ST
+}
+
+enum CandidateStatus {
+  PENDING // imported, awaiting admin verification
+  VERIFIED
+  REJECTED
+}
+
+enum PollStatus {
+  DRAFT
+  PUBLISHED
+  CANCELLED
+}
+
+enum ResultPolicy {
+  LIVE // running counts visible while the poll is open
+  DELAYED // counts visible with a lag of publishDelayMinutes
+  AFTER_CLOSE // hidden until the poll closes
+}
+
+// ---------- Auth (NextAuth Prisma adapter) ----------
+
+model User {
+  id              String    @id @default(cuid())
+  name            String?
+  email           String?   @unique
+  emailVerified   DateTime?
+  image           String?
+  role            Role      @default(USER)
+  locale          String    @default("en")
+  phone           String?   @unique // E.164, set only after OTP verification
+  phoneVerifiedAt DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  accounts      Account[]
+  sessions      Session[]
+  votes         Vote[]
+  otpChallenges OtpChallenge[]
+  auditLogs     AuditLog[]
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model OtpChallenge {
+  id         String    @id @default(cuid())
+  userId     String
+  phone      String
+  codeHash   String
+  attempts   Int       @default(0)
+  expiresAt  DateTime
+  consumedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([phone, createdAt])
+}
+
+// ---------- Directory ----------
+
+model Constituency {
+  id          String           @id // e.g. "AC-001", "PC-01"
+  type        ConstituencyType
+  number      Int
+  nameEn      String
+  nameTe      String
+  district    String // district as per the 2008 delimitation order
+  reservation Reservation      @default(GEN)
+  parentId    String? // Assembly segment -> Lok Sabha constituency
+  sourceUrl   String
+
+  parent     Constituency?  @relation("Segments", fields: [parentId], references: [id])
+  segments   Constituency[] @relation("Segments")
+  candidates Candidate[]
+  polls      Poll[]
+
+  @@unique([type, number])
+  @@index([nameEn])
+}
+
+model Candidate {
+  id             String          @id @default(cuid())
+  constituencyId String
+  nameEn         String
+  nameTe         String
+  partyEn        String
+  partyTe        String
+  electionYear   Int
+  photoUrl       String?
+  sourceUrl      String // official source: ECI affidavit / CEO Andhra Pradesh
+  sourceLabel    String
+  status         CandidateStatus @default(PENDING)
+  verifiedAt     DateTime?
+  verifiedById   String?
+  isDemo         Boolean         @default(false)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  constituency Constituency @relation(fields: [constituencyId], references: [id])
+  pollOptions  PollOption[]
+
+  @@unique([constituencyId, electionYear, nameEn])
+  @@index([status])
+}
+
+// ---------- Polls ----------
+
+model Poll {
+  id                  String       @id @default(cuid())
+  constituencyId      String
+  questionEn          String
+  questionTe          String
+  pollDate            DateTime     @db.Date // calendar day in Asia/Kolkata
+  opensAt             DateTime
+  closesAt            DateTime
+  status              PollStatus   @default(DRAFT)
+  resultPolicy        ResultPolicy @default(AFTER_CLOSE)
+  publishDelayMinutes Int          @default(0)
+  isDemo              Boolean      @default(false)
+  createdById         String?
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+
+  constituency Constituency @relation(fields: [constituencyId], references: [id])
+  options      PollOption[]
+  votes        Vote[]
+  report       PollReport?
+
+  @@index([status, opensAt, closesAt])
+  @@index([pollDate])
+}
+
+model PollOption {
+  id          String  @id @default(cuid())
+  pollId      String
+  candidateId String?
+  // Option without a candidate = "None of these / Undecided".
+  labelEn     String?
+  labelTe     String?
+  sortOrder   Int     @default(0)
+
+  poll      Poll       @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  candidate Candidate? @relation(fields: [candidateId], references: [id])
+  votes     Vote[]
+
+  @@unique([id, pollId])
+  @@unique([pollId, candidateId])
+}
+
+model Vote {
+  id        String   @id @default(cuid())
+  pollId    String
+  optionId  String
+  userId    String
+  createdAt DateTime @default(now())
+
+  poll   Poll       @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  option PollOption @relation(fields: [optionId, pollId], references: [id, pollId])
+  user   User       @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@unique([pollId, userId])
+  @@index([pollId, createdAt])
+}
+
+// Frozen end-of-day result, written once by the finaliser after closesAt.
+model PollReport {
+  pollId      String   @id
+  totalVotes  Int
+  tallies     Json // [{ optionId, votes }]
+  generatedAt DateTime @default(now())
+
+  poll Poll @relation(fields: [pollId], references: [id], onDelete: Cascade)
+}
+
+// ---------- Administration ----------
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String?
+  action     String
+  entityType String
+  entityId   String?
+  metadata   Json?
+  ip         String?
+  createdAt  DateTime @default(now())
+
+  actor User? @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+  @@index([entityType, entityId])
+}
