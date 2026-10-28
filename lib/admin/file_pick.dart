@@ -15,3 +15,6 @@ Future<PickedFile?> pickImageFile() => impl.pickImageFile();
 
 /// Triggers a browser download (used for config backups).
 void downloadText(String filename, String text) => impl.downloadText(filename, text);
+
+/// Reloads the website into the admin console (web only).
+void openAdminConsole() => impl.openAdminConsole();

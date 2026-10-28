@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../admin/file_pick.dart';
 import '../../config/config_service.dart';
 import '../../data/ap_data.dart';
 import '../../data/featured_polls.dart';
@@ -529,8 +530,16 @@ class _Footer extends StatelessWidget {
             const SizedBox(height: 32),
             const Divider(color: Color(0xFF1E293B)),
             const SizedBox(height: 16),
-            Text('© ${istNow().year} ${b.appName} · ${b.tagline(context.isTelugu)}',
-                style: const TextStyle(color: Color(0xFF64748B))),
+            Row(children: [
+              Text('© ${istNow().year} ${b.appName} · ${b.tagline(context.isTelugu)}',
+                  style: const TextStyle(color: Color(0xFF64748B))),
+              const Spacer(),
+              TextButton.icon(
+                onPressed: openAdminConsole,
+                icon: const Icon(Icons.admin_panel_settings_outlined, size: 18, color: Color(0xFF64748B)),
+                label: const Text('Admin console', style: TextStyle(color: Color(0xFF64748B))),
+              ),
+            ]),
           ]),
         ),
       ),

@@ -33,3 +33,8 @@ void downloadText(String filename, String text) {
     ..click();
   web.URL.revokeObjectURL(url);
 }
+
+void openAdminConsole() {
+  web.window.location.hash = '/admin';
+  web.window.location.reload();
+}
