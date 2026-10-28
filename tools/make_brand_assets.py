@@ -64,7 +64,10 @@ logo.save("assets/brand/logo.png", optimize=True)
 mark.save("assets/brand/mark.png", optimize=True)
 wordmark.save("assets/brand/wordmark.png", optimize=True)
 
-icon = square(mark, 1024, 0.84)
+# An app icon uploaded in the admin panel (fetched by apply_remote_icon.py) wins.
+override = BRAND / "app-icon-override.png"
+icon_src = trim(transparent(Image.open(override))) if override.exists() else mark
+icon = square(icon_src, 1024, 0.84)
 
 # Android launcher icons.
 for folder, size in {"mdpi": 48, "hdpi": 72, "xhdpi": 96, "xxhdpi": 144, "xxxhdpi": 192}.items():

@@ -1,5 +1,7 @@
 import 'dart:math';
 
+import '../config/app_config.dart';
+import '../config/config_service.dart';
 import 'ap_data.dart';
 import 'poll_month.dart';
 import 'results_2024.dart';
@@ -24,11 +26,17 @@ class Candidate {
       };
 
   bool get isPerson => contestant != null;
-  Party get party => partyById(contestant?.partyId ?? 'oth');
-  String? get photoUrl => contestant?.photoUrl;
   String get id => '${constituency.id}-$index';
+  CandidateOverride? get _override => appConfig.candidates[id];
 
-  String name(bool telugu) => contestant?.name ?? (telugu ? 'ఇతరులు / నోటా' : 'Others / NOTA');
+  Party get party => partyById(_override?.partyId ?? contestant?.partyId ?? 'oth');
+  String? get photoUrl => _override?.photoUrl ?? contestant?.photoUrl;
+
+  String name(bool telugu) {
+    final o = _override;
+    if (contestant == null) return telugu ? 'ఇతరులు / నోటా' : 'Others / NOTA';
+    return (telugu ? o?.nameTe : null) ?? o?.name ?? contestant!.name;
+  }
 
   static Candidate byId(String id) {
     final cut = id.lastIndexOf('-');

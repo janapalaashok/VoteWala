@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../config/config_service.dart';
 import '../data/ap_data.dart';
 import '../data/featured_polls.dart';
 import '../data/poll_month.dart';
@@ -16,10 +17,6 @@ import 'constituency_detail_screen.dart';
 import 'featured_poll_screen.dart';
 import 'main_shell.dart';
 
-/// Seats highlighted on the dashboard.
-const topMlaSeats = ['mla-129', 'mla-175', 'mla-37', 'mla-87', 'mla-157']; // Pulivendla, Kuppam, Pithapuram, Mangalagiri, Hindupur
-const topMpSeats = ['mp-4', 'mp-23', 'mp-21', 'mp-5', 'mp-12']; // Visakhapatnam, Tirupati, Kadapa, Anakapalli, Vijayawada
-
 void openConstituency(BuildContext context, Constituency c, {int tab = 0}) => Navigator.of(context).push(
       MaterialPageRoute<void>(builder: (_) => ConstituencyDetailScreen(constituency: c, initialTab: tab)),
     );
@@ -30,6 +27,8 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final shell = ShellScope.maybeOf(context);
+    AppScope.of(context); // rebuild when the admin config changes
+    final home = appConfig.home;
     void push(Widget page) => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => page));
 
     return Scaffold(
@@ -93,18 +92,24 @@ class HomeScreen extends StatelessWidget {
                 ]),
                 const SizedBox(height: 12),
                 const SizedBox(height: 4),
-                const _MonthlyVotesCard(),
-                const SizedBox(height: 8),
-                SectionHeader(context.tr('topMlaSeats'),
-                    action: context.tr('viewAll'), onAction: () => shell?.go(ShellTab.mla)),
-                const _TopSeats(ids: topMlaSeats),
-                const SizedBox(height: 8),
-                SectionHeader(context.tr('topMpSeats'),
-                    action: context.tr('viewAll'), onAction: () => shell?.go(ShellTab.mp)),
-                const _TopSeats(ids: topMpSeats),
-                const SizedBox(height: 8),
-                SectionHeader(context.tr('featuredPolls')),
-                const _FeaturedPolls(),
+                if (home.showMonthlyVotes) ...[
+                  const MonthlyVotesCard(),
+                  const SizedBox(height: 8),
+                ],
+                if (home.showTopSeats) ...[
+                  SectionHeader(context.tr('topMlaSeats'),
+                      action: context.tr('viewAll'), onAction: () => shell?.go(ShellTab.mla)),
+                  _TopSeats(ids: home.topMla),
+                  const SizedBox(height: 8),
+                  SectionHeader(context.tr('topMpSeats'),
+                      action: context.tr('viewAll'), onAction: () => shell?.go(ShellTab.mp)),
+                  _TopSeats(ids: home.topMp),
+                  const SizedBox(height: 8),
+                ],
+                if (home.showFeatured && featuredPolls.isNotEmpty) ...[
+                  SectionHeader(context.tr('featuredPolls')),
+                  const _FeaturedPolls(),
+                ],
               ]),
             ),
           ],
@@ -170,7 +175,7 @@ class _Hero extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 22, 20, 16),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(context.tr('heroTitle'),
+              Text((context.isTelugu ? appConfig.home.heroTitleTe : appConfig.home.heroTitleEn) ?? context.tr('heroTitle'),
                   style: TextStyle(
                       color: Colors.white, fontSize: wide ? 32 : 26, fontWeight: FontWeight.w800, height: 1.15)),
               if (!context.isTelugu) ...[
@@ -181,7 +186,7 @@ class _Hero extends StatelessWidget {
               const SizedBox(height: 10),
               ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 340),
-                child: Text(context.tr('heroSub'),
+                child: Text((context.isTelugu ? appConfig.home.heroSubtitleTe : appConfig.home.heroSubtitleEn) ?? context.tr('heroSub'),
                     style: const TextStyle(color: Colors.white, fontSize: 13.5, height: 1.4)),
               ),
               const Spacer(),
@@ -264,8 +269,8 @@ class _QuickAction extends StatelessWidget {
       );
 }
 
-class _MonthlyVotesCard extends StatelessWidget {
-  const _MonthlyVotesCard();
+class MonthlyVotesCard extends StatelessWidget {
+  const MonthlyVotesCard({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -312,6 +317,15 @@ class _MonthlyVotesCard extends StatelessWidget {
   }
 }
 
+bool _validId(String id) {
+  try {
+    ApData.byId(id);
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
+
 class _TopSeats extends StatelessWidget {
   const _TopSeats({required this.ids});
 
@@ -324,7 +338,8 @@ class _TopSeats extends StatelessWidget {
       final columns = box.maxWidth >= 900 ? 3 : (box.maxWidth >= 600 ? 2 : 1);
       final w = (box.maxWidth - (columns - 1) * 12) / columns;
       return Wrap(spacing: 12, runSpacing: 10, children: [
-        for (final id in ids) SizedBox(width: w, child: PollCard(snapshot: state.snapshot(ApData.byId(id)))),
+        for (final id in ids)
+          if (_validId(id)) SizedBox(width: w, child: PollCard(snapshot: state.snapshot(ApData.byId(id)))),
       ]);
     });
   }
@@ -394,7 +409,7 @@ class PollCard extends StatelessWidget {
             ),
           ),
           if (voted)
-            const Icon(Icons.check_circle, color: AppColors.green, size: 22)
+            Icon(Icons.check_circle, color: AppColors.green, size: 22)
           else if (!snapshot.closed && state.canVote(c))
             SizedBox(
               height: 34,

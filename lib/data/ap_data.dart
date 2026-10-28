@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../config/config_service.dart';
+
 enum ElectionType { mla, mp }
 
 /// One of the 13 (pre-2022) districts of Andhra Pradesh. Assembly
@@ -42,7 +44,12 @@ class Constituency {
 
   String get id => '${type.name}-$no';
   bool get isMla => type == ElectionType.mla;
-  String name(bool telugu) => telugu ? te : en;
+
+  /// Name, honouring admin overrides.
+  String name(bool telugu) {
+    final o = appConfig.constituencyNames[id];
+    return (telugu ? o?.te : o?.en) ?? (telugu ? te : en);
+  }
   List<District> get districts => districtIds.map(ApData.district).toList();
 
   bool matches(String query) {
@@ -72,6 +79,38 @@ class Party {
 
   /// Seat tallies show the four main parties; everything else is "Others".
   String get group => mainPartyIds.contains(id) ? id : 'oth';
+
+  Party copyWith({String? short, String? en, String? te, Color? color, PartySymbol? symbol}) =>
+      Party(id, short ?? this.short, en ?? this.en, te ?? this.te, color ?? this.color, symbol ?? this.symbol);
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'short': short,
+        'en': en,
+        'te': te,
+        'color': colorToHex(color),
+        'symbol': symbol.name,
+      };
+
+  factory Party.fromJson(Map<String, dynamic> j) {
+    final fallback = defaultParties.where((p) => p.id == j['id']).firstOrNull;
+    return Party(
+      j['id'] as String,
+      j['short'] as String? ?? fallback?.short ?? '',
+      j['en'] as String? ?? fallback?.en ?? '',
+      j['te'] as String? ?? fallback?.te ?? '',
+      colorFromHex(j['color'] as String?) ?? fallback?.color ?? const Color(0xFF8E9AAF),
+      PartySymbol.values.where((s) => s.name == j['symbol']).firstOrNull ?? fallback?.symbol ?? PartySymbol.other,
+    );
+  }
+}
+
+String colorToHex(Color c) => '#${(c.toARGB32() & 0xFFFFFF).toRadixString(16).padLeft(6, '0').toUpperCase()}';
+
+Color? colorFromHex(String? hex) {
+  final h = hex?.replaceFirst('#', '').trim();
+  if (h == null || !RegExp(r'^[0-9a-fA-F]{6}$').hasMatch(h)) return null;
+  return Color(0xFF000000 | int.parse(h, radix: 16));
 }
 
 const mainPartyIds = ['tdp', 'ysrcp', 'jsp', 'bjp'];
@@ -79,7 +118,7 @@ const mainPartyIds = ['tdp', 'ysrcp', 'jsp', 'bjp'];
 /// Groups used for seat tallies, in display order.
 const seatGroups = ['tdp', 'ysrcp', 'jsp', 'bjp', 'oth'];
 
-const parties = <Party>[
+const defaultParties = <Party>[
   Party('tdp', 'TDP', 'Telugu Desam Party', 'తెలుగుదేశం పార్టీ', Color(0xFFF5C400), PartySymbol.bicycle),
   Party('ysrcp', 'YSRCP', 'YSR Congress Party', 'వైఎస్ఆర్ కాంగ్రెస్ పార్టీ', Color(0xFF2F6FDB), PartySymbol.fan),
   Party('jsp', 'JSP', 'Janasena Party', 'జనసేన పార్టీ', Color(0xFFE53935), PartySymbol.glass),
@@ -88,7 +127,11 @@ const parties = <Party>[
   Party('oth', 'Others', 'Others / NOTA', 'ఇతరులు / నోటా', Color(0xFF8E9AAF), PartySymbol.other),
 ];
 
-Party partyById(String id) => parties.firstWhere((p) => p.id == id, orElse: () => parties.last);
+/// Parties as currently configured by the admin.
+List<Party> get parties => appConfig.parties;
+
+Party partyById(String id) =>
+    parties.where((p) => p.id == id).firstOrNull ?? parties.where((p) => p.id == 'oth').firstOrNull ?? defaultParties.last;
 
 class ApData {
   static const districts = <District>[

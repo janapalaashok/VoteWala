@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/widgets.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../config/config_service.dart';
 import '../data/ap_data.dart';
 import '../data/featured_polls.dart';
 import '../data/poll_month.dart';
@@ -47,6 +48,8 @@ class AppState extends ChangeNotifier {
     _saved = (_prefs.getStringList(_savedKey) ?? const []).toSet();
     final notif = _prefs.getString('notif');
     if (notif != null) _notif.addAll(Map<String, bool>.from(jsonDecode(notif) as Map));
+    // Admin config changes (names, photos, colours, polls) rebuild the UI.
+    ConfigService.instance.addListener(notifyListeners);
   }
 
   static const _votesKey = 'votes_v2';

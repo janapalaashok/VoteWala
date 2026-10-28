@@ -1,7 +1,10 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'admin/admin_app.dart';
+import 'config/config_service.dart';
 import 'screens/main_shell.dart';
 import 'screens/welcome_screen.dart';
 import 'state/app_state.dart';
@@ -10,6 +13,12 @@ import 'theme.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final prefs = await SharedPreferences.getInstance();
+  await ConfigService.instance.init(prefs);
+  // The admin panel is part of the website only: https://<site>/#/admin
+  if (kIsWeb && Uri.base.fragment.startsWith('/admin')) {
+    runApp(AdminApp(prefs: prefs));
+    return;
+  }
   runApp(VoteWalaApp(state: AppState(prefs)));
 }
 
@@ -24,7 +33,7 @@ class VoteWalaApp extends StatelessWidget {
         child: ListenableBuilder(
           listenable: state,
           builder: (context, _) => MaterialApp(
-            title: 'VoteWala',
+            title: appConfig.branding.appName,
             debugShowCheckedModeBanner: false,
             theme: buildTheme(),
             locale: Locale(state.language),

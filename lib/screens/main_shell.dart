@@ -1,9 +1,12 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../data/ap_data.dart';
 import '../l10n/strings.dart';
 import '../widgets/common.dart';
 import 'constituency_list_screen.dart';
+import 'desktop/desktop_home.dart';
+import 'desktop/desktop_shell.dart';
 import 'home_screen.dart';
 import 'profile_screen.dart';
 import 'results_screen.dart';
@@ -57,6 +60,16 @@ class _MainShellState extends State<MainShell> {
       child: IndexedStack(index: _index, children: _pages),
     );
 
+    if (kIsWeb && isWide(context)) {
+      return ShellScope(
+        go: (i) => setState(() => _index = i),
+        child: DesktopShell(
+          index: _index,
+          onSelect: (i) => setState(() => _index = i),
+          body: IndexedStack(index: _index, children: [const DesktopHome(), ..._pages.skip(1)]),
+        ),
+      );
+    }
     if (isWide(context)) {
       final extended = MediaQuery.sizeOf(context).width >= 1200;
       return Scaffold(

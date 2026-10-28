@@ -1,5 +1,9 @@
+import 'dart:convert';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:votewala/config/app_config.dart';
+import 'package:votewala/config/config_service.dart';
 import 'package:votewala/data/ap_data.dart';
 import 'package:votewala/data/featured_polls.dart';
 import 'package:votewala/data/poll_month.dart';
@@ -91,6 +95,50 @@ void main() {
         expect(state.featuredTotals(cm)[2], before + 1);
       }
       expect(featuredById('artificial-paneer-ban-2026').end.difference(featuredById('artificial-paneer-ban-2026').start).inDays, 10);
+    });
+  });
+
+  group('admin config', () {
+    tearDown(() => ConfigService.instance.apply(AppConfig.defaults()));
+
+    test('round-trips through JSON', () {
+      final c = AppConfig.defaults().copyWith(
+        candidates: {'mla-175-0': const CandidateOverride(nameTe: 'చంద్రబాబు', photoUrl: 'https://x/p.png')},
+        constituencyNames: {'mla-1': const NamePair(en: 'Ichchapuram (Town)')},
+        home: const HomeConfig(topMla: ['mla-1']),
+      );
+      final back = AppConfig.fromJson(jsonDecode(jsonEncode(c.toJson())) as Map<String, dynamic>);
+      expect(jsonEncode(back.toJson()), jsonEncode(c.toJson()));
+      expect(back.featured.length, defaultFeaturedPolls.length);
+      expect(back.parties.length, defaultParties.length);
+    });
+
+    test('overrides apply to candidates, parties, constituencies and polls', () {
+      final kuppam = Candidate(ApData.byId('mla-175'), 0);
+      final officialName = kuppam.name(false);
+      ConfigService.instance.apply(AppConfig.defaults().copyWith(
+        candidates: {kuppam.id: const CandidateOverride(name: 'New Name', nameTe: 'కొత్త పేరు', photoUrl: 'https://x/p.png')},
+        constituencyNames: {'mla-175': const NamePair(te: 'కుప్పం (కొత్త)')},
+        parties: [for (final p in defaultParties) p.id == 'tdp' ? p.copyWith(short: 'TDP*') : p],
+        featured: [FeaturedPoll.fromJson({...defaultFeaturedPolls.first.toJson(), 'enabled': false}), ...defaultFeaturedPolls.skip(1)],
+      ));
+      expect(kuppam.name(false), 'New Name');
+      expect(kuppam.name(true), 'కొత్త పేరు');
+      expect(kuppam.photoUrl, 'https://x/p.png');
+      expect(kuppam.party.short, 'TDP*');
+      expect(ApData.byId('mla-175').name(true), 'కుప్పం (కొత్త)');
+      expect(ApData.byId('mla-175').name(false), 'Kuppam');
+      expect(featuredPolls.length, defaultFeaturedPolls.length - 1);
+
+      ConfigService.instance.apply(AppConfig.defaults());
+      expect(kuppam.name(false), officialName);
+    });
+
+    test('older documents missing sections fall back to defaults', () {
+      final c = AppConfig.fromJson({'branding': {'primary': '#7C3AED'}});
+      expect(colorToHex(c.branding.primary), '#7C3AED');
+      expect(c.home.topMla, const HomeConfig().topMla);
+      expect(c.featured.length, defaultFeaturedPolls.length);
     });
   });
 

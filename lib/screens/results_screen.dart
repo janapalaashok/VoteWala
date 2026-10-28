@@ -27,7 +27,7 @@ Future<PollMonth?> pickMonth(BuildContext context, PollMonth selected) {
         for (final m in PollMonth.available())
           ListTile(
             title: Text(m.isCurrent ? '${ctx.tr('thisMonth')} (${m.label(te)})' : m.label(te)),
-            trailing: m == selected ? const Icon(Icons.check, color: AppColors.orange) : null,
+            trailing: m == selected ? Icon(Icons.check, color: AppColors.orange) : null,
             onTap: () => Navigator.pop(ctx, m),
           ),
       ]),

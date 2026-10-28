@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../config/config_service.dart';
 import '../data/ap_data.dart';
 import '../data/poll_repository.dart';
 import '../l10n/strings.dart';
@@ -24,7 +25,8 @@ class PageBody extends StatelessWidget {
       );
 }
 
-/// The official VoteWala logo (images in assets/brand, generated from brand/).
+/// The VoteWala logo: uploaded images from the admin config, otherwise the
+/// bundled assets (generated from brand/).
 class VoteWalaLogo extends StatelessWidget {
   const VoteWalaLogo({super.key, this.markSize = 56, this.horizontal = false, this.tagline = true});
 
@@ -35,17 +37,23 @@ class VoteWalaLogo extends StatelessWidget {
   /// Without the tagline, the stacked logo shows the mark only (e.g. a nav rail).
   final bool tagline;
 
+  static Widget _image(String asset, String? url, {double? height, double? width}) {
+    final fallback = Image.asset(asset, height: height, width: width, semanticLabel: 'VoteWala');
+    if (url == null) return fallback;
+    return Image.network(url, height: height, width: width, errorBuilder: (_, _, _) => fallback);
+  }
+
   @override
   Widget build(BuildContext context) {
-    if (horizontal) {
-      return Image.asset('assets/brand/logo.png', height: markSize, semanticLabel: 'VoteWala');
-    }
-    final mark = Image.asset('assets/brand/mark.png', height: markSize, semanticLabel: 'VoteWala');
+    final b = appConfig.branding;
+    if (horizontal) return _image('assets/brand/logo.png', b.logoUrl, height: markSize);
+    final mark = _image('assets/brand/mark.png', b.markUrl, height: markSize);
     if (!tagline) return mark;
+    if (b.logoUrl != null && b.markUrl == null) return _image('assets/brand/logo.png', b.logoUrl, width: markSize * 2.4);
     return Column(mainAxisSize: MainAxisSize.min, children: [
       mark,
       SizedBox(height: markSize * 0.12),
-      Image.asset('assets/brand/wordmark.png', width: markSize * 1.9),
+      _image('assets/brand/wordmark.png', null, width: markSize * 1.9),
     ]);
   }
 }
@@ -132,18 +140,22 @@ class SearchField extends StatelessWidget {
               borderRadius: BorderRadius.all(Radius.circular(24)), borderSide: BorderSide(color: AppColors.border)),
           enabledBorder: const OutlineInputBorder(
               borderRadius: BorderRadius.all(Radius.circular(24)), borderSide: BorderSide(color: AppColors.border)),
-          focusedBorder: const OutlineInputBorder(
+          focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.all(Radius.circular(24)), borderSide: BorderSide(color: AppColors.orange)),
         ),
       );
 }
 
 class StatusBadge extends StatelessWidget {
-  const StatusBadge({super.key, required this.label, this.color = AppColors.green, this.icon = Icons.circle});
+  // ignore: prefer_initializing_formals
+  const StatusBadge({super.key, required this.label, Color? color, this.icon = Icons.circle}) : _color = color;
 
   final String label;
-  final Color color;
+  final Color? _color;
   final IconData icon;
+
+  /// Defaults to the brand secondary colour (live/green).
+  Color get color => _color ?? AppColors.green;
 
   @override
   Widget build(BuildContext context) => Container(
@@ -548,7 +560,7 @@ class ConstituencyTile extends StatelessWidget {
               Text(c.name(!te), style: const TextStyle(color: AppColors.muted, fontSize: 12.5)),
             ]),
           ),
-          if (voted) const Icon(Icons.check_circle, color: AppColors.green, size: 20),
+          if (voted) Icon(Icons.check_circle, color: AppColors.green, size: 20),
           const SizedBox(width: 4),
           const Icon(Icons.chevron_right, color: AppColors.muted),
         ]),

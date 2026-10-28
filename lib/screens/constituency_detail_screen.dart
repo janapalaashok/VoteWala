@@ -232,10 +232,10 @@ class _CountdownState extends State<_Countdown> {
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(color: const Color(0xFFE8F6EC), borderRadius: BorderRadius.circular(8)),
         child: Row(mainAxisSize: MainAxisSize.min, children: [
-          const Icon(Icons.schedule, size: 14, color: AppColors.green),
+          Icon(Icons.schedule, size: 14, color: AppColors.green),
           const SizedBox(width: 4),
           Text(formatCountdown(timeUntil(widget.until)),
-              style: const TextStyle(
+              style: TextStyle(
                 color: AppColors.green,
                 fontWeight: FontWeight.w700,
                 fontSize: 12.5,
@@ -434,7 +434,7 @@ class _AboutTab extends StatelessWidget {
               ),
             const SizedBox(height: 4),
             Text(context.tr('wonBy', {'n': formatIndian(r.margin)}),
-                style: const TextStyle(color: AppColors.green, fontWeight: FontWeight.w600)),
+                style: TextStyle(color: AppColors.green, fontWeight: FontWeight.w600)),
           ]),
         ),
       ),

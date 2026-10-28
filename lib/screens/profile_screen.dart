@@ -22,7 +22,7 @@ class ProfileScreen extends StatelessWidget {
           for (final (code, label) in [('en', 'English'), ('te', 'తెలుగు')])
             ListTile(
               title: Text(label),
-              trailing: state.language == code ? const Icon(Icons.check, color: AppColors.orange) : null,
+              trailing: state.language == code ? Icon(Icons.check, color: AppColors.orange) : null,
               onTap: () {
                 state.setLanguage(code);
                 Navigator.pop(ctx);
@@ -72,10 +72,10 @@ class ProfileScreen extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
           decoration: BoxDecoration(color: const Color(0xFFE8F6EC), borderRadius: BorderRadius.circular(10)),
           child: Row(mainAxisSize: MainAxisSize.min, children: [
-            const Icon(Icons.check_circle, size: 13, color: AppColors.green),
+            Icon(Icons.check_circle, size: 13, color: AppColors.green),
             const SizedBox(width: 4),
             Text(context.tr('verified'),
-                style: const TextStyle(color: AppColors.green, fontSize: 11.5, fontWeight: FontWeight.w600)),
+                style: TextStyle(color: AppColors.green, fontSize: 11.5, fontWeight: FontWeight.w600)),
           ]),
         );
 
@@ -102,7 +102,7 @@ class ProfileScreen extends StatelessWidget {
                   radius: 36,
                   backgroundColor: AppColors.orange.withValues(alpha: 0.15),
                   child: Text(initials,
-                      style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: AppColors.orange)),
+                      style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: AppColors.orange)),
                 ),
                 const SizedBox(width: 16),
                 Expanded(

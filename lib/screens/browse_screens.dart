@@ -59,7 +59,7 @@ class _SearchScreenState extends State<SearchScreen> {
                 : ListView(children: [
                     for (final d in districts)
                       ListTile(
-                        leading: const Icon(Icons.map_outlined, color: AppColors.green),
+                        leading: Icon(Icons.map_outlined, color: AppColors.green),
                         title: Text(d.name(te), style: const TextStyle(fontWeight: FontWeight.w600)),
                         subtitle: Text('${context.tr('district')} · ${context.tr('nConstituencies', {'n': '${d.mlaCount}'})}'),
                         onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(

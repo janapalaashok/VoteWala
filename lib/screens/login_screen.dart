@@ -201,7 +201,7 @@ class _OtpScreenState extends State<OtpScreen> {
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 420),
             child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-              const Icon(Icons.sms_outlined, size: 56, color: AppColors.orange),
+              Icon(Icons.sms_outlined, size: 56, color: AppColors.orange),
               const SizedBox(height: 16),
               Text(context.tr('enterOtp', {'phone': '+91 ${widget.phone}'}),
                   textAlign: TextAlign.center, style: const TextStyle(fontSize: 15, height: 1.4)),

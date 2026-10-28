@@ -82,9 +82,9 @@ class FeaturedPollCard extends StatelessWidget {
         Row(children: [
           Expanded(child: Text(subtitle, style: const TextStyle(color: AppColors.muted, fontSize: 12))),
           if (mine != null)
-            const Icon(Icons.check_circle, color: AppColors.green, size: 20)
+            Icon(Icons.check_circle, color: AppColors.green, size: 20)
           else if (poll.isOpen)
-            Text(context.tr('voteNow'), style: const TextStyle(color: AppColors.orange, fontWeight: FontWeight.w700)),
+            Text(context.tr('voteNow'), style: TextStyle(color: AppColors.orange, fontWeight: FontWeight.w700)),
         ]),
       ]),
     );
@@ -256,7 +256,7 @@ class _FeaturedPollScreenState extends State<FeaturedPollScreen> {
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Row(children: [
-                    const Icon(Icons.check_circle, color: AppColors.green),
+                    Icon(Icons.check_circle, color: AppColors.green),
                     const SizedBox(width: 10),
                     Expanded(child: Text(context.tr('yourChoice', {'x': poll.options[mine].label(te)}))),
                   ]),

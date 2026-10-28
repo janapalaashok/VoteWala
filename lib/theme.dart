@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 
+import 'config/config_service.dart';
+
 class AppColors {
-  static const orange = Color(0xFFF47A1F);
+  /// Brand primary / secondary colours come from the admin config.
+  static Color get orange => appConfig.branding.primary;
   static const orangeDark = Color(0xFFE5640C);
-  static const green = Color(0xFF1E9A3F);
+  static Color get green => appConfig.branding.secondary;
   static const greenDark = Color(0xFF17803A);
   static const ink = Color(0xFF1B1D21);
   static const muted = Color(0xFF6B7280);
@@ -54,7 +57,7 @@ ThemeData buildTheme() {
         textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
       ),
     ),
-    inputDecorationTheme: const InputDecorationThemeData(
+    inputDecorationTheme: InputDecorationThemeData(
       filled: true,
       fillColor: Colors.white,
       contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 14),
@@ -63,7 +66,7 @@ ThemeData buildTheme() {
       enabledBorder: OutlineInputBorder(borderRadius: radius, borderSide: BorderSide(color: AppColors.border)),
       focusedBorder: OutlineInputBorder(borderRadius: radius, borderSide: BorderSide(color: AppColors.orange, width: 1.5)),
     ),
-    tabBarTheme: const TabBarThemeData(
+    tabBarTheme: TabBarThemeData(
       labelColor: AppColors.orange,
       unselectedLabelColor: AppColors.muted,
       indicatorColor: AppColors.orange,
@@ -87,9 +90,9 @@ ThemeData buildTheme() {
     navigationRailTheme: NavigationRailThemeData(
       backgroundColor: Colors.white,
       indicatorColor: AppColors.orange.withValues(alpha: 0.12),
-      selectedIconTheme: const IconThemeData(color: AppColors.orange),
+      selectedIconTheme: IconThemeData(color: AppColors.orange),
       unselectedIconTheme: const IconThemeData(color: AppColors.muted),
-      selectedLabelTextStyle: const TextStyle(color: AppColors.orange, fontWeight: FontWeight.w700),
+      selectedLabelTextStyle: TextStyle(color: AppColors.orange, fontWeight: FontWeight.w700),
       unselectedLabelTextStyle: const TextStyle(color: AppColors.muted, fontWeight: FontWeight.w500),
     ),
     dividerTheme: const DividerThemeData(color: AppColors.border, space: 1, thickness: 1),
