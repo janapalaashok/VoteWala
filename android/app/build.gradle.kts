@@ -29,11 +29,20 @@ android {
         versionName = flutter.versionName
     }
 
+    // Fixed key for test APKs so each new build installs as an update.
+    // Not for the Play Store: create a private upload key before publishing.
+    signingConfigs {
+        create("test") {
+            storeFile = file("votewala-test.jks")
+            storePassword = "votewala-test"
+            keyAlias = "votewala"
+            keyPassword = "votewala-test"
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.getByName("test")
         }
     }
 }

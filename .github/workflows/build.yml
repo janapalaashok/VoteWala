@@ -34,12 +34,16 @@ jobs:
         run: |
           python3 tools/apply_remote_icon.py
           if [ -f brand/app-icon-override.png ]; then pip install pillow && python3 tools/make_brand_assets.py; fi
-      - run: flutter build apk --release
-      - run: cp build/app/outputs/flutter-apk/app-release.apk VoteWala.apk
+      # Build number grows every run so each APK installs as an update.
+      - run: flutter build apk --release --split-per-abi --build-number=$((100 + ${{ github.run_number }}))
+      - run: |
+          cp build/app/outputs/flutter-apk/app-arm64-v8a-release.apk VoteWala.apk
+          cp build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk VoteWala-old-phones.apk
+          ls -la *.apk
       - uses: actions/upload-artifact@v4
         with:
           name: VoteWala-apk
-          path: VoteWala.apk
+          path: VoteWala*.apk
       - name: Publish test release
         uses: softprops/action-gh-release@v2
         with:
@@ -49,6 +53,9 @@ jobs:
           make_latest: false
           target_commitish: ${{ github.sha }}
           body: |
-            Test APK built from ${{ github.ref_name }} @ ${{ github.sha }}.
-            Signed with the debug key: for testing only, not for the Play Store.
-          files: VoteWala.apk
+            Test APK built from ${{ github.ref_name }} @ ${{ github.sha }} (build ${{ github.run_number }}).
+            VoteWala.apk works on almost all phones (64-bit). VoteWala-old-phones.apk is for very old 32-bit phones.
+            Signed with the VoteWala test key: for testing only, not for the Play Store.
+          files: |
+            VoteWala.apk
+            VoteWala-old-phones.apk
