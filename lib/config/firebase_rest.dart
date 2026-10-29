@@ -117,14 +117,26 @@ class FirebaseRest {
 
   /// Uploads a file to Firebase Storage and returns its public download URL.
   Future<String> upload(String path, Uint8List bytes, String contentType) async {
+    const notEnabled = 'Photo upload needs Firebase Storage, which is not enabled yet. '
+        'Use "Paste URL" for now, or enable Storage (docs/FIREBASE_SETUP.md, step 4).';
     final bucket = settings.storageBucket;
-    final r = await _http.post(
-      Uri.parse('https://firebasestorage.googleapis.com/v0/b/$bucket/o?uploadType=media&name=${Uri.encodeQueryComponent(path)}'),
-      headers: {if (_idToken != null) 'Authorization': 'Firebase $_idToken', 'Content-Type': contentType},
-      body: bytes,
-    );
+    if (bucket.isEmpty) throw FirebaseException(notEnabled);
+    final http.Response r;
+    try {
+      r = await _http.post(
+        Uri.parse('https://firebasestorage.googleapis.com/v0/b/$bucket/o?uploadType=media&name=${Uri.encodeQueryComponent(path)}'),
+        headers: {if (_idToken != null) 'Authorization': 'Firebase $_idToken', 'Content-Type': contentType},
+        body: bytes,
+      );
+    } catch (_) {
+      throw FirebaseException(notEnabled);
+    }
     if (r.statusCode != 200) {
-      throw FirebaseException(r.statusCode == 403 ? 'Upload not allowed for this account' : 'Upload failed (${r.statusCode})');
+      throw FirebaseException(switch (r.statusCode) {
+        403 => 'Upload not allowed for this account (check storage.rules)',
+        400 || 404 || 412 => notEnabled,
+        _ => 'Upload failed (${r.statusCode})',
+      });
     }
     final meta = jsonDecode(r.body) as Map<String, dynamic>;
     final token = (meta['downloadTokens'] as String?)?.split(',').first;
