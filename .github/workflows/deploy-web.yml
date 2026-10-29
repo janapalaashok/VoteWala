@@ -25,10 +25,10 @@ jobs:
           cache: true
       - if: env.HAS_SERVICE_ACCOUNT == 'true'
         run: flutter pub get && flutter build web --release
-      - uses: FirebaseExtended/action-hosting-deploy@v0
+      - name: Deploy to Firebase Hosting
         if: env.HAS_SERVICE_ACCOUNT == 'true'
-        with:
-          repoToken: ${{ secrets.GITHUB_TOKEN }}
-          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-          projectId: votewala-a2dcd
-          channelId: live
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          pip install google-auth requests
+          python3 tools/deploy_hosting.py votewala-a2dcd build/web
