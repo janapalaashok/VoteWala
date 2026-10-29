@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../config/config_service.dart';
@@ -27,6 +28,12 @@ class PageBody extends StatelessWidget {
 
 /// The VoteWala logo: uploaded images from the admin config, otherwise the
 /// bundled assets (generated from brand/).
+/// Wikimedia rejects images requested with a generic client User-Agent, so the
+/// apps identify themselves. Browsers send their own and forbid overriding it.
+const Map<String, String>? imageHeaders = kIsWeb
+    ? null
+    : {'User-Agent': 'VoteWala/1.0 (https://votewala-a2dcd.web.app)'};
+
 class VoteWalaLogo extends StatelessWidget {
   const VoteWalaLogo({super.key, this.markSize = 56, this.horizontal = false, this.tagline = true});
 
@@ -219,6 +226,7 @@ class PersonAvatar extends StatelessWidget {
             ? fallback
             : Image.network(
                 photoUrl!,
+                headers: imageHeaders,
                 fit: BoxFit.cover,
                 alignment: Alignment.topCenter,
                 errorBuilder: (_, _, _) => fallback,
