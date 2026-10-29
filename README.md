@@ -2,6 +2,10 @@
 
 **Your Voice. Your Choice. / మీ అభిప్రాయం. మీ ఎంపిక.**
 
+- Website: https://votewala-a2dcd.web.app (admin: https://votewala-a2dcd.web.app/#/admin)
+- Android test APK: https://github.com/janapalaashok/VoteWala/releases/tag/test-build
+- Admin panel & Firebase setup: [docs/FIREBASE_SETUP.md](docs/FIREBASE_SETUP.md)
+
 Andhra Pradesh political opinion polls: daily polls for all 175 assembly (MLA) and
 25 parliament (MP) constituencies. Built with Flutter from a single codebase for:
 
@@ -54,9 +58,9 @@ flutter build ipa --release          # App Store (macOS + Xcode, signing require
 - **Poll counts and candidate profiles are sample data** generated in
   `lib/data/poll_repository.dart` (placeholder names "Candidate 1…5"). Replace
   `PollRepository` with API calls and load candidate data from ECI affidavits.
-- **Auth is a demo** (`lib/services/auth_service.dart`): Google sign-in returns a demo user and
-  any 6-digit OTP is accepted. Implement `AuthService` with Firebase Auth (Google + phone) for
-  production.
+- **Voter sign-in is still a demo** (`lib/services/auth_service.dart`): Google sign-in returns a
+  demo user and any 6-digit OTP is accepted. Admin sign-in uses Firebase Authentication.
+- Branding, candidates, polls and home content come from the admin panel (Firebase Firestore).
 - Votes, language, saved candidates and settings are stored on-device with `shared_preferences`.
 
 ## Tests
