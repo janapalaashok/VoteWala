@@ -57,6 +57,17 @@ flutter build web --release \
   --dart-define=FIREBASE_STORAGE_BUCKET=...
 ```
 
+## 6. Website hosting (auto-deploy)
+The website (and its admin panel) is published to **https://votewala-a2dcd.web.app** by
+`.github/workflows/deploy-web.yml` on every push. One-time setup:
+1. Firebase console → **Build → Hosting → Get started** → click through (skip the CLI steps).
+2. ⚙️ **Project settings → Service accounts → Generate new private key** → downloads a JSON file.
+3. GitHub repo → **Settings → Secrets and variables → Actions → New repository secret**:
+   name `FIREBASE_SERVICE_ACCOUNT`, value = the whole JSON file content.
+4. Re-run the "Deploy website" workflow (Actions tab) or push any change.
+
+The service-account key is a real secret: store it only in GitHub secrets, never in chat or code.
+
 ## Using the admin panel
 1. Open `https://<website>/#/admin` and sign in with the admin email/password.
 2. Edit anything; changes go into a **draft** (kept in your browser).
