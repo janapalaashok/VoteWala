@@ -8,6 +8,7 @@ import 'config/config_service.dart';
 import 'screens/main_shell.dart';
 import 'screens/welcome_screen.dart';
 import 'state/app_state.dart';
+import 'state/deep_link.dart';
 import 'theme.dart';
 
 Future<void> main() async {
@@ -15,6 +16,7 @@ Future<void> main() async {
   final prefs = await SharedPreferences.getInstance();
   await ConfigService.instance.init(prefs);
   // The admin panel is part of the website only: https://<site>/#/admin
+  if (kIsWeb) DeepLink.parse(Uri.base.fragment);
   if (kIsWeb && Uri.base.fragment.startsWith('/admin')) {
     runApp(AdminApp(prefs: prefs));
     return;

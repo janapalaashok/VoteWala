@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import '../config/config_service.dart';
 import '../data/ap_data.dart';
@@ -8,6 +7,7 @@ import '../l10n/strings.dart';
 import '../theme.dart';
 import '../utils.dart';
 import 'painters.dart';
+import 'share_card.dart';
 
 bool isWide(BuildContext context) => MediaQuery.sizeOf(context).width >= 900;
 
@@ -523,15 +523,39 @@ class EmptyState extends StatelessWidget {
       );
 }
 
-/// Copies a shareable description of a poll to the clipboard.
-Future<void> sharePoll(BuildContext context, Constituency c) async {
-  final messenger = ScaffoldMessenger.of(context);
-  final message = context.tr('copied');
-  await Clipboard.setData(ClipboardData(
-    text: 'VoteWala: ${c.en} (${c.te}) ${c.isMla ? 'MLA' : 'MP'} poll is live. '
-        'Your Voice. Your Choice. Cast your opinion today!',
-  ));
-  messenger.showSnackBar(SnackBar(content: Text(message)));
+/// Opens the social share card for a constituency poll.
+Future<void> sharePoll(BuildContext context, Constituency c) => shareConstituency(context, c);
+
+/// Eye-catching "Share & invite friends" button.
+class ShareInviteButton extends StatelessWidget {
+  const ShareInviteButton({super.key, required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) => DecoratedBox(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(14),
+          gradient: LinearGradient(colors: [AppColors.orange, AppColors.green]),
+          boxShadow: [BoxShadow(color: AppColors.orange.withValues(alpha: 0.3), blurRadius: 14, offset: const Offset(0, 6))],
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(14),
+            onTap: onPressed,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 15),
+              child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                const Icon(Icons.ios_share, color: Colors.white),
+                const SizedBox(width: 10),
+                Text(context.tr('shareInvite'),
+                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 15.5)),
+              ]),
+            ),
+          ),
+        ),
+      );
 }
 
 /// Leading-party blob for a constituency tile.

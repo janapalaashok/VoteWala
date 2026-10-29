@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../data/ap_data.dart';
 import '../l10n/strings.dart';
+import '../state/deep_link.dart';
 import '../widgets/common.dart';
 import 'constituency_list_screen.dart';
 import 'desktop/desktop_home.dart';
@@ -37,6 +38,14 @@ class MainShell extends StatefulWidget {
 
 class _MainShellState extends State<MainShell> {
   int _index = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) DeepLink.openPending(context);
+    });
+  }
 
   static const _pages = [
     HomeScreen(),

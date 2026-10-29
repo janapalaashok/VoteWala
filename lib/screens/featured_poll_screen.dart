@@ -8,6 +8,7 @@ import '../state/app_state.dart';
 import '../theme.dart';
 import '../utils.dart';
 import '../widgets/common.dart';
+import '../widgets/share_card.dart';
 
 const _palette = [
   Color(0xFFF47A1F), Color(0xFF2F6FDB), Color(0xFF1E9A3F), Color(0xFFE53935),
@@ -167,7 +168,13 @@ class _FeaturedPollScreenState extends State<FeaturedPollScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(backgroundColor: AppColors.green, content: Text(context.tr('voteRecorded'))),
       );
+      _share();
     }
+  }
+
+  void _share() {
+    final poll = widget.poll;
+    showShareSheet(context, featuredShareData(context, poll, AppScope.read(context).featuredTotals(poll), (i) => optionColor(poll, i)));
   }
 
   @override
@@ -182,7 +189,11 @@ class _FeaturedPollScreenState extends State<FeaturedPollScreen> {
 
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(backgroundColor: Colors.white, title: Text(poll.title(te))),
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        title: Text(poll.title(te)),
+        actions: [IconButton(icon: const Icon(Icons.share_outlined), onPressed: _share)],
+      ),
       body: ListView(padding: const EdgeInsets.fromLTRB(16, 4, 16, 32), children: [
         PageBody(
           maxWidth: 680,
@@ -261,6 +272,10 @@ class _FeaturedPollScreenState extends State<FeaturedPollScreen> {
                     Expanded(child: Text(context.tr('yourChoice', {'x': poll.options[mine].label(te)}))),
                   ]),
                 ),
+              if (mine != null) ...[
+                const SizedBox(height: 12),
+                ShareInviteButton(onPressed: _share),
+              ],
               const SizedBox(height: 8),
               SectionHeader(context.tr('results')),
               for (final i in _ranking(totals))

@@ -117,7 +117,7 @@ class _PollTabState extends State<_PollTab> {
       content: Text(context.tr('voteRecorded')),
     ));
     Navigator.of(context).push(
-      MaterialPageRoute<void>(builder: (_) => LiveResultsScreen(constituency: widget.constituency)),
+      MaterialPageRoute<void>(builder: (_) => LiveResultsScreen(constituency: widget.constituency, justVoted: true)),
     );
   }
 
@@ -187,6 +187,10 @@ class _PollTabState extends State<_PollTab> {
         ),
       ],
       const SizedBox(height: 10),
+      if (voted != null) ...[
+        ShareInviteButton(onPressed: () => sharePoll(context, c)),
+        const SizedBox(height: 10),
+      ],
       if (locked)
         OutlinedButton.icon(
           onPressed: () => Navigator.of(context)

@@ -10,6 +10,8 @@ import 'package:votewala/data/poll_month.dart';
 import 'package:votewala/data/poll_repository.dart';
 import 'package:votewala/main.dart';
 import 'package:votewala/state/app_state.dart';
+import 'package:votewala/state/deep_link.dart';
+import 'package:votewala/widgets/share_card.dart';
 import 'package:votewala/utils.dart';
 
 void main() {
@@ -140,6 +142,16 @@ void main() {
       expect(c.home.topMla, const HomeConfig().topMla);
       expect(c.featured.length, defaultFeaturedPolls.length);
     });
+  });
+
+  test('share links and deep links round-trip', () {
+    expect(constituencyLink(ApData.byId('mla-37')), 'https://votewala-a2dcd.web.app/#/c/mla-37');
+    DeepLink.parse('/c/mla-37');
+    DeepLink.parse('/admin'); // not a share link: keeps the earlier one
+    DeepLink.parse('/c/<script>'); // rejected
+    expect(DeepLink.pending, 'c:mla-37');
+    DeepLink.clear();
+    expect(featuredLink(featuredById('cm-2026')), 'https://votewala-a2dcd.web.app/#/f/cm-2026');
   });
 
   test('formatting', () {

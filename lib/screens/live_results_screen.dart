@@ -8,11 +8,15 @@ import '../state/app_state.dart';
 import '../theme.dart';
 import '../utils.dart';
 import '../widgets/common.dart';
+import '../widgets/share_card.dart';
 
 class LiveResultsScreen extends StatefulWidget {
-  const LiveResultsScreen({super.key, required this.constituency});
+  const LiveResultsScreen({super.key, required this.constituency, this.justVoted = false});
 
   final Constituency constituency;
+
+  /// Opens the share card right after a vote.
+  final bool justVoted;
 
   @override
   State<LiveResultsScreen> createState() => _LiveResultsScreenState();
@@ -26,6 +30,11 @@ class _LiveResultsScreenState extends State<LiveResultsScreen> {
   void initState() {
     super.initState();
     _refresh = Timer.periodic(const Duration(seconds: 30), (_) => setState(() => _updated = istNow()));
+    if (widget.justVoted) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) shareConstituency(context, widget.constituency);
+      });
+    }
   }
 
   @override
@@ -65,6 +74,8 @@ class _LiveResultsScreenState extends State<LiveResultsScreen> {
               const SizedBox(height: 10),
               for (final i in snapshot.ranking)
                 ResultRow(snapshot: snapshot, index: i, highlight: i == snapshot.leader),
+              const SizedBox(height: 14),
+              ShareInviteButton(onPressed: () => shareConstituency(context, c)),
               const SizedBox(height: 16),
               AppCard(
                 padding: EdgeInsets.zero,

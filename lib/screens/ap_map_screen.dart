@@ -31,6 +31,12 @@ const _outlines = <String, List<(double, double)>>{
 const _minLon = 76.7, _maxLon = 84.95, _minLat = 12.55, _maxLat = 19.3;
 const _mapAspect = (_maxLon - _minLon) / (_maxLat - _minLat);
 
+/// District outlines scaled to [size] (also used by share cards).
+Map<String, Path> apMapPaths(Size size) => _buildPaths(size);
+
+/// Width / height of the AP map.
+const apMapAspect = _mapAspect;
+
 Map<String, Path> _buildPaths(Size size) => {
       for (final e in _outlines.entries)
         e.key: Path()
