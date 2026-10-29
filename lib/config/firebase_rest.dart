@@ -5,16 +5,18 @@ import 'package:http/http.dart' as http;
 
 import 'app_config.dart';
 
-/// Firebase project settings, passed at build time:
-///   --dart-define=FIREBASE_API_KEY=... --dart-define=FIREBASE_PROJECT_ID=...
-///   --dart-define=FIREBASE_STORAGE_BUCKET=...
+/// Firebase project settings. Defaults point at the VoteWala project; a build
+/// can target another project with --dart-define=FIREBASE_API_KEY=... etc.
+///
+/// The web API key is not a secret (it ships inside every Firebase app);
+/// access is controlled by firestore.rules and storage.rules.
 class FirebaseSettings {
   const FirebaseSettings({required this.apiKey, required this.projectId, required this.storageBucket});
 
   static const fromEnvironment = FirebaseSettings(
-    apiKey: String.fromEnvironment('FIREBASE_API_KEY'),
-    projectId: String.fromEnvironment('FIREBASE_PROJECT_ID'),
-    storageBucket: String.fromEnvironment('FIREBASE_STORAGE_BUCKET'),
+    apiKey: String.fromEnvironment('FIREBASE_API_KEY', defaultValue: 'AIzaSyAimoZLqju6M4goUgfSvPxXmZaEhvBzu-I'),
+    projectId: String.fromEnvironment('FIREBASE_PROJECT_ID', defaultValue: 'votewala-a2dcd'),
+    storageBucket: String.fromEnvironment('FIREBASE_STORAGE_BUCKET', defaultValue: 'votewala-a2dcd.firebasestorage.app'),
   );
 
   final String apiKey;
@@ -65,7 +67,14 @@ class FirebaseRest {
     final body = jsonDecode(r.body) as Map<String, dynamic>;
     if (r.statusCode != 200) {
       final code = (body['error'] as Map?)?['message'] as String? ?? 'SIGN_IN_FAILED';
-      throw FirebaseException(code.contains('INVALID') ? 'Wrong email or password' : code);
+      throw FirebaseException(switch (code) {
+        'CONFIGURATION_NOT_FOUND' || 'OPERATION_NOT_ALLOWED' =>
+          'Email/Password sign-in is not enabled: Firebase console → Authentication → Sign-in method.',
+        'USER_DISABLED' => 'This account is disabled in Firebase Authentication.',
+        _ when code.startsWith('TOO_MANY_ATTEMPTS') => 'Too many attempts. Try again in a few minutes.',
+        _ when code.contains('INVALID') || code.contains('NOT_FOUND') => 'Wrong email or password',
+        _ => code,
+      });
     }
     _idToken = body['idToken'] as String;
     uid = body['localId'] as String;

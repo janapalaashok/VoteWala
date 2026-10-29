@@ -40,8 +40,9 @@ it on every launch. Until Firebase is connected, the panel runs in **demo mode**
 **Project settings → General → Your apps → Add app → Web (</>)**, then copy:
 `apiKey`, `projectId`, `storageBucket`.
 
-These are not secret passwords (security comes from the rules above), but keep them in
-GitHub secrets so builds pick them up:
+The VoteWala project's keys are already the defaults in
+`lib/config/firebase_rest.dart` (they are public by design; security comes from the rules
+above). To point a build at a different Firebase project, set these GitHub secrets / dart-defines:
 
 **GitHub → repo → Settings → Secrets and variables → Actions → New repository secret**
 - `FIREBASE_API_KEY`
