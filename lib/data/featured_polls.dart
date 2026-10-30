@@ -1,4 +1,3 @@
-import 'dart:math';
 
 import 'package:flutter/material.dart';
 
@@ -152,26 +151,6 @@ class FeaturedPoll {
     final last = PollMonth.of(isOpen ? istNow() : end.subtract(const Duration(minutes: 1)));
     return [for (var m = PollMonth.of(start); m.compareTo(last) <= 0; m = m.next) m];
   }
-
-  /// Expected share of a month's votes cast so far in [month]: the part of
-  /// the month inside the poll window that has already elapsed.
-  double _elapsed(PollMonth month) {
-    final from = start.isAfter(month.start) ? start : month.start;
-    final to = end.isBefore(month.end) ? end : month.end;
-    final now = istNow();
-    final until = now.isBefore(to) ? now : to;
-    if (!until.isAfter(from)) return 0;
-    return until.difference(from).inMinutes / month.end.difference(month.start).inMinutes;
-  }
-
-  /// Votes cast in [month] per option (sample data).
-  List<int> votesIn(PollMonth month) {
-    final rnd = Random(stableHash(id) + month.index * 7907);
-    final weights = [for (final o in options) o.weight * (0.8 + rnd.nextDouble() * 0.4)];
-    final sum = weights.reduce((a, b) => a + b);
-    final total = (monthlyVotes * (0.8 + rnd.nextDouble() * 0.4) * _elapsed(month)).round();
-    return [for (final w in weights) (total * w / sum).round()];
-  }
 }
 
 /// Built-in featured polls; the admin panel can replace them.
@@ -241,7 +220,9 @@ final defaultFeaturedPolls = <FeaturedPoll>[
 ];
 
 /// Featured polls currently enabled by the admin.
-List<FeaturedPoll> get featuredPolls => [for (final p in appConfig.featured) if (p.enabled) p];
+/// Active featured polls, at most [CivicConfig.maxFeatured] (5).
+List<FeaturedPoll> get featuredPolls =>
+    [for (final p in appConfig.featured) if (p.enabled) p].take(appConfig.civic.maxFeatured).toList();
 
 FeaturedPoll featuredById(String id) =>
     appConfig.featured.firstWhere((p) => p.id == id, orElse: () => defaultFeaturedPolls.firstWhere((p) => p.id == id));

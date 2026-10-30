@@ -20,7 +20,8 @@ rules_version = '2';
 //   settings/{doc}                       thresholds and badge milestones
 //
 // Poll ids: mla-YYYY-MM, mp-YYYY-MM, issues-YYYY-MM, priority-YYYY-MM (the
-// month in India time, so only the current month is open) and f-<featured id>.
+// month in India time, so only the current month is open) and f-<featured id>
+// (featured buckets are YYYY-MM-s<0-9>: ten counters per month).
 //
 // The emulator rejects ?: expressions, so conditions are written as and/or.
 service cloud.firestore {
@@ -54,7 +55,7 @@ service cloud.firestore {
     }
 
     function validBucket(pollId, bucket) {
-      return (kind(pollId) == 'f' && bucket.matches('^s[0-9]$'))
+      return (kind(pollId) == 'f' && bucket.matches('^' + monthKey() + '-s[0-9]$'))
         || (kind(pollId) == 'mp' && bucket.matches('^mp-[0-9]{1,3}$'))
         || (kind(pollId) in ['mla', 'issues', 'priority'] && bucket.matches('^mla-[0-9]{1,3}$'));
     }

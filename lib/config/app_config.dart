@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../data/ap_data.dart';
+import '../data/civic.dart';
 import '../data/featured_polls.dart';
 
 /// Brand settings an admin can change.
@@ -205,6 +206,7 @@ class AppConfig {
     required this.constituencyNames,
     required this.featured,
     required this.home,
+    this.civic = const CivicConfig(),
     this.updatedAt,
     this.updatedBy,
   });
@@ -224,6 +226,7 @@ class AppConfig {
   final Map<String, NamePair> constituencyNames;
   final List<FeaturedPoll> featured;
   final HomeConfig home;
+  final CivicConfig civic;
   final DateTime? updatedAt;
   final String? updatedBy;
 
@@ -234,6 +237,7 @@ class AppConfig {
     Map<String, NamePair>? constituencyNames,
     List<FeaturedPoll>? featured,
     HomeConfig? home,
+    CivicConfig? civic,
     DateTime? updatedAt,
     String? updatedBy,
   }) =>
@@ -244,6 +248,7 @@ class AppConfig {
         constituencyNames: constituencyNames ?? this.constituencyNames,
         featured: featured ?? this.featured,
         home: home ?? this.home,
+        civic: civic ?? this.civic,
         updatedAt: updatedAt ?? this.updatedAt,
         updatedBy: updatedBy ?? this.updatedBy,
       );
@@ -262,6 +267,7 @@ class AppConfig {
         },
         'featured': [for (final f in featured) f.toJson()],
         'home': home.toJson(),
+        'civic': civic.toJson(),
         if (updatedAt != null) 'updatedAt': updatedAt!.toIso8601String(),
         if (updatedBy != null) 'updatedBy': updatedBy,
       };
@@ -290,6 +296,7 @@ class AppConfig {
           ? [for (final f in j['featured'] as List) FeaturedPoll.fromJson(Map<String, dynamic>.from(f as Map))]
           : d.featured,
       home: j['home'] is Map ? HomeConfig.fromJson(map(j['home'])) : d.home,
+      civic: j['civic'] is Map ? CivicConfig.fromJson(map(j['civic'])) : d.civic,
       updatedAt: DateTime.tryParse(j['updatedAt'] as String? ?? ''),
       updatedBy: _str(j['updatedBy']),
     );

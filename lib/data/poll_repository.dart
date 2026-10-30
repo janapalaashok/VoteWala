@@ -1,5 +1,3 @@
-import 'dart:math';
-
 import '../config/app_config.dart';
 import '../config/config_service.dart';
 import 'ap_data.dart';
@@ -59,6 +57,9 @@ class PollSnapshot {
   /// Candidate indices ordered by votes, highest first.
   List<int> get ranking => List.generate(votes.length, (i) => i)..sort((a, b) => votes[b].compareTo(votes[a]));
   int get leader => ranking.first;
+
+  /// False until someone votes; such polls have no leader.
+  bool get hasVotes => total > 0;
   Party get leadingParty => candidates[leader].party;
 }
 
@@ -68,7 +69,7 @@ class SeatTally {
       : seats = {for (final g in seatGroups) g: 0},
         votes = polls.fold(0, (a, p) => a + p.total) {
     for (final p in polls) {
-      seats[p.leadingParty.group] = seats[p.leadingParty.group]! + 1;
+      if (p.hasVotes) seats[p.leadingParty.group] = seats[p.leadingParty.group]! + 1;
     }
   }
 
@@ -93,37 +94,10 @@ class DistrictSummary {
   final SeatTally tally;
 }
 
-/// Generates deterministic sample opinion-poll counts per constituency per
-/// month. Replace with API calls when the backend is available.
+/// The fixed poll options of every constituency.
 class PollRepository {
   static final _candidates = <String, List<Candidate>>{};
 
   static List<Candidate> candidates(Constituency c) => _candidates.putIfAbsent(
       c.id, () => List.generate(CandidateRole.values.length, (i) => Candidate(c, i), growable: false));
-
-  static bool _isNda(String partyId) => partyId == 'tdp' || partyId == 'jsp' || partyId == 'bjp';
-
-  static PollSnapshot snapshot(Constituency c, {PollMonth? month, int? userChoice}) {
-    final m = month ?? PollMonth.current();
-    final rnd = Random(c.no * 7919 + (c.isMla ? 0 : 104729) + m.index * 31337);
-    final weights = <double>[36 + rnd.nextDouble() * 20, 28 + rnd.nextDouble() * 20, 3 + rnd.nextDouble() * 7];
-
-    // Regional NDA-vs-opposition swing that varies by district and month.
-    final districtIndex = ApData.districts.indexWhere((x) => x.id == c.districtIds.first);
-    final swing = Random(districtIndex * 97 + m.index * 13).nextDouble() * 24 - 12;
-    final result = PollRepository.candidates(c).first.result2024;
-    final winnerIsNda = _isNda(result.winner.partyId);
-    final runnerIsNda = _isNda(result.runnerUp.partyId);
-    if (winnerIsNda != runnerIsNda) {
-      weights[0] = max(1, weights[0] + (winnerIsNda ? swing : -swing));
-      weights[1] = max(1, weights[1] + (runnerIsNda ? swing : -swing));
-    }
-    final sum = weights.reduce((a, b) => a + b);
-
-    final full = c.isMla ? 4000 + rnd.nextInt(14000) : 40000 + rnd.nextInt(90000);
-    final total = (full * (0.1 + 0.9 * m.elapsed)).round();
-    final votes = [for (final w in weights) (total * w / sum).round()];
-    if (userChoice != null) votes[userChoice] += 1;
-    return PollSnapshot(c, votes, month: m);
-  }
 }

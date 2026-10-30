@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -9,6 +10,9 @@ import 'package:votewala/data/featured_polls.dart';
 import 'package:votewala/data/poll_month.dart';
 import 'package:votewala/data/poll_repository.dart';
 import 'package:votewala/main.dart';
+import 'package:votewala/services/auth_service.dart';
+import 'package:votewala/services/firestore_client.dart';
+import 'package:votewala/services/vote_service.dart';
 import 'package:votewala/state/app_state.dart';
 import 'package:votewala/state/deep_link.dart';
 import 'package:votewala/widgets/share_card.dart';
@@ -58,45 +62,77 @@ void main() {
   });
 
   group('polls', () {
-    test('past months are closed, snapshots are deterministic and count the user vote', () {
+    test('snapshots count real votes only; empty polls have no leader', () {
       final c = ApData.byId('mla-37');
       const month = PollMonth(2026, 3);
-      final a = PollRepository.snapshot(c, month: month);
-      final b = PollRepository.snapshot(c, month: month, userChoice: 1);
-      expect(a.closed, isTrue);
-      expect(b.votes[1], a.votes[1] + 1);
-      expect(a.ranking.first, a.leader);
-      expect(SeatTally(ApData.mla.map((c) => PollRepository.snapshot(c, month: month))).total, 175);
+      final empty = PollSnapshot(c, [0, 0, 0], month: month);
+      final some = PollSnapshot(c, [3, 5, 1], month: month);
+      expect(empty.closed, isTrue);
+      expect(empty.hasVotes, isFalse);
+      expect(some.leader, 1);
+      expect(SeatTally([empty, some]).total, 1);
     });
 
-    test('one MLA and one MP vote per user per month', () async {
-      SharedPreferences.setMockInitialValues({});
-      final state = AppState(await SharedPreferences.getInstance());
-      state.signIn(const AppUser(name: 'A', email: 'a@x.com', provider: 'google'));
-      expect(state.castVote(Candidate(ApData.byId('mla-21'), 0)), isTrue);
-      expect(state.castVote(Candidate(ApData.byId('mla-22'), 1)), isFalse);
-      expect(state.castVote(Candidate(ApData.byId('mla-21'), 1)), isFalse);
-      expect(state.castVote(Candidate(ApData.byId('mp-4'), 0)), isTrue);
+    test('one MLA and one MP vote per user per month, counted in the tallies', () async {
+      final (state, store) = await newState();
+      await state.signIn(alice);
+      final outcome = await state.castVote(Candidate(ApData.byId('mla-21'), 0));
+      expect(outcome.newBadges.map((b) => b.id), ['first-voice']);
+      await expectLater(state.castVote(Candidate(ApData.byId('mla-22'), 1)), throwsA(isA<VoteException>()));
+      await state.castVote(Candidate(ApData.byId('mp-4'), 0));
       expect(state.canVote(ApData.byId('mp-5')), isFalse);
       expect(state.choiceIndex(ApData.byId('mla-21')), 0);
+      expect(state.voteCount, 2);
 
-      // A different account on the same device has its own votes.
-      state.signIn(const AppUser(name: 'B', email: 'b@x.com', provider: 'google'));
+      final m = PollMonth.current().key;
+      expect(store.docs['tallies/mla-$m/buckets/mla-21'], containsPair('o0', 1));
+      expect(store.docs['users/alice'], containsPair('voteCount', 2));
+      expect(store.docs.containsKey('users/alice/badges/first-voice'), isTrue);
+
+      // The database refuses a second ballot even if the app thinks it can vote.
+      final again = VoteService(store, MemoryPhotoStore(), minGap: Duration.zero);
+      await expectLater(
+        again.castOption(uid: 'alice', pollId: 'mla-$m', bucket: 'mla-22', option: 1),
+        throwsA(isA<VoteException>().having((e) => e.error, 'error', VoteError.alreadyVoted)),
+      );
+
+      // Votes follow the account, not the device.
+      await state.signIn(bob);
       expect(state.canVote(ApData.byId('mla-22')), isTrue);
+      await state.signIn(alice);
+      expect(state.canVote(ApData.byId('mla-22')), isFalse);
     });
 
     test('featured polls allow one vote per user', () async {
-      SharedPreferences.setMockInitialValues({});
-      final state = AppState(await SharedPreferences.getInstance());
-      state.signIn(const AppUser(name: 'A', email: 'a@x.com', provider: 'google'));
+      final (state, _) = await newState();
+      await state.signIn(alice);
       final cm = featuredById('cm-2026');
-      final before = state.featuredTotals(cm)[2];
-      expect(state.castFeaturedVote(cm, 2), cm.isOpen);
       if (cm.isOpen) {
-        expect(state.castFeaturedVote(cm, 1), isFalse);
-        expect(state.featuredTotals(cm)[2], before + 1);
+        await state.castFeaturedVote(cm, 2);
+        await expectLater(state.castFeaturedVote(cm, 1), throwsA(isA<VoteException>()));
+        expect(state.featuredChoice(cm), 2);
+        expect(state.featuredVoteMonth(cm), PollMonth.current());
       }
       expect(featuredById('artificial-paneer-ban-2026').end.difference(featuredById('artificial-paneer-ban-2026').start).inDays, 10);
+    });
+
+    test('local issues, evidence photos and threshold alerts', () async {
+      final (state, store) = await newState();
+      store.docs['settings/thresholds'] = {'default': 2};
+      final c = ApData.byId('mla-21');
+      final m = PollMonth.current().key;
+      await state.signIn(alice);
+      await state.castIssues(c, {'c0': 1, 'c3': 0}, otherText: 'Bus stand roof');
+      await state.addIssuePhoto('c0', Uint8List.fromList([1, 2, 3]), 'Potholes');
+      await state.signIn(bob);
+      await state.castIssues(c, {'c0': 1});
+      await Future<void>.delayed(Duration.zero);
+
+      expect(store.docs['tallies/issues-$m/buckets/mla-21_c0'], {'o1': 2, 'total': 2, 'p1': 1});
+      expect(store.docs['photos/issues-${m}_alice_c0'], containsPair('status', 'pending'));
+      expect(store.docs['otherIssues/issues-${m}_alice'], containsPair('text', 'Bus stand roof'));
+      expect(store.docs.keys.where((k) => k.startsWith('alerts/')), ['alerts/issues-${m}_mla-21_c0_2']);
+      await expectLater(state.castIssues(c, {'c1': 0}), throwsA(isA<VoteException>()));
     });
   });
 
@@ -162,9 +198,7 @@ void main() {
   });
 
   testWidgets('language choice leads to login, and votes are recorded', (tester) async {
-    SharedPreferences.setMockInitialValues({});
-    final prefs = await SharedPreferences.getInstance();
-    final state = AppState(prefs);
+    final (state, store) = await newState();
     await tester.pumpWidget(VoteWalaApp(state: state));
 
     expect(find.text('Continue in English'), findsOneWidget);
@@ -181,9 +215,23 @@ void main() {
     expect(find.text('Vote for CM'), findsOneWidget);
 
     final c = ApData.byId('mla-21');
-    expect(state.castVote(Candidate(c, 0)), isTrue);
+    await tester.runAsync(() => state.castVote(Candidate(c, 0)));
     expect(state.choiceIndex(c), 0);
     expect(state.voteHistory, hasLength(1));
-    expect(prefs.getString('votes_v2'), contains('mla-21'));
+    expect(store.docs.keys, contains('votes/mla-${PollMonth.current().key}/ballots/demo-google'));
   });
+}
+
+const alice = AppUser(uid: 'alice', name: 'A', phone: '+91 9000000001', provider: 'phone');
+const bob = AppUser(uid: 'bob', name: 'B', phone: '+91 9000000002', provider: 'phone');
+
+Future<(AppState, MemoryStore)> newState() async {
+  SharedPreferences.setMockInitialValues({});
+  final store = MemoryStore();
+  final state = AppState(
+    await SharedPreferences.getInstance(),
+    auth: const DemoAuthService(),
+    votes: VoteService(store, MemoryPhotoStore(), minGap: Duration.zero),
+  );
+  return (state, store);
 }

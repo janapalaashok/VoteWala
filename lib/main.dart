@@ -6,6 +6,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'admin/admin_app.dart';
 import 'config/config_service.dart';
 import 'screens/main_shell.dart';
+import 'services/auth_service.dart';
+import 'services/firebase_auth_service.dart';
+import 'services/firestore_client.dart';
+import 'services/vote_service.dart';
 import 'screens/welcome_screen.dart';
 import 'state/app_state.dart';
 import 'state/deep_link.dart';
@@ -21,7 +25,20 @@ Future<void> main() async {
     runApp(AdminApp(prefs: prefs));
     return;
   }
-  runApp(VoteWalaApp(state: AppState(prefs)));
+  final settings = ConfigService.instance.settings;
+  try {
+    authService = await FirebaseAuthService.init(settings);
+  } catch (e) {
+    debugPrint('Firebase unavailable: $e');
+    authService = const UnavailableAuthService();
+  }
+  final votes = VoteService(
+    FirestoreClient(settings, idToken: authService.idToken),
+    FirebasePhotoStore(settings, authService.idToken),
+  );
+  final state = AppState(prefs, auth: authService, votes: votes);
+  await state.restoreSession();
+  runApp(VoteWalaApp(state: state));
 }
 
 class VoteWalaApp extends StatelessWidget {

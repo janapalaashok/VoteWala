@@ -8,6 +8,7 @@ import '../state/app_state.dart';
 import '../theme.dart';
 import '../utils.dart';
 import '../widgets/common.dart';
+import '../widgets/vote_flow.dart';
 import '../widgets/share_card.dart';
 
 const _palette = [
@@ -164,12 +165,9 @@ class _FeaturedPollScreenState extends State<FeaturedPollScreen> {
       ),
     );
     if (ok != true || !mounted) return;
-    if (AppScope.read(context).castFeaturedVote(poll, _selected!)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(backgroundColor: AppColors.green, content: Text(context.tr('voteRecorded'))),
-      );
-      _share();
-    }
+    final state = AppScope.read(context);
+    final option = _selected!;
+    if (await submitVote(context, () => state.castFeaturedVote(poll, option)) != null && mounted) _share();
   }
 
   void _share() {

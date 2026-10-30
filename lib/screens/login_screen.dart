@@ -12,6 +12,7 @@ import 'main_shell.dart';
 
 void enterApp(BuildContext context, AppUser user) {
   AppScope.read(context).signIn(user);
+  TextInput.finishAutofillContext();
   Navigator.of(context).pushAndRemoveUntil(
     MaterialPageRoute<void>(builder: (_) => const MainShell()),
     (_) => false,
@@ -41,9 +42,9 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       final user = await authService.signInWithGoogle();
       if (mounted) enterApp(context, user);
-    } catch (_) {
+    } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('signInFailed'))));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr(authMessage(e)))));
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -60,10 +61,20 @@ class _LoginScreenState extends State<LoginScreen> {
       _error = null;
       _busy = true;
     });
-    await authService.sendOtp(phone);
-    if (!mounted) return;
-    setState(() => _busy = false);
-    Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => OtpScreen(phone: phone)));
+    try {
+      final user = await authService.sendOtp(phone);
+      if (!mounted) return;
+      if (user != null) {
+        // Android verified the number by itself.
+        enterApp(context, user);
+        return;
+      }
+      Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => OtpScreen(phone: phone)));
+    } catch (e) {
+      if (mounted) setState(() => _error = context.tr(authMessage(e)));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
   }
 
   @override
@@ -86,24 +97,26 @@ class _LoginScreenState extends State<LoginScreen> {
                 Text(context.tr('signInSub'),
                     textAlign: TextAlign.center, style: const TextStyle(color: AppColors.muted, height: 1.4)),
                 const SizedBox(height: 32),
-                OutlinedButton(
-                  onPressed: _busy ? null : _google,
-                  child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                    const _GoogleG(),
-                    const SizedBox(width: 12),
-                    Text(context.tr('continueGoogle'), style: const TextStyle(color: AppColors.blue)),
-                  ]),
-                ),
-                const SizedBox(height: 20),
-                Row(children: [
-                  const Expanded(child: Divider()),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    child: Text(context.tr('or'), style: const TextStyle(color: AppColors.muted)),
+                if (authService.supportsGoogle) ...[
+                  OutlinedButton(
+                    onPressed: _busy ? null : _google,
+                    child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                      const _GoogleG(),
+                      const SizedBox(width: 12),
+                      Text(context.tr('continueGoogle'), style: const TextStyle(color: AppColors.blue)),
+                    ]),
                   ),
-                  const Expanded(child: Divider()),
-                ]),
-                const SizedBox(height: 20),
+                  const SizedBox(height: 20),
+                  Row(children: [
+                    const Expanded(child: Divider()),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      child: Text(context.tr('or'), style: const TextStyle(color: AppColors.muted)),
+                    ),
+                    const Expanded(child: Divider()),
+                  ]),
+                  const SizedBox(height: 20),
+                ],
                 TextField(
                   controller: _phone,
                   keyboardType: TextInputType.phone,
@@ -183,8 +196,8 @@ class _OtpScreenState extends State<OtpScreen> {
     try {
       final user = await authService.verifyOtp(widget.phone, _code.text);
       if (mounted) enterApp(context, user);
-    } on FormatException {
-      if (mounted) setState(() => _error = context.tr('invalidOtp'));
+    } catch (e) {
+      if (mounted) setState(() => _error = context.tr(authMessage(e)));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -233,8 +246,13 @@ class _OtpScreenState extends State<OtpScreen> {
                 onPressed: () async {
                   final messenger = ScaffoldMessenger.of(context);
                   final sent = context.tr('otpSent');
-                  await authService.sendOtp(widget.phone);
-                  messenger.showSnackBar(SnackBar(content: Text(sent)));
+                  try {
+                    final user = await authService.sendOtp(widget.phone);
+                    if (user != null && context.mounted) return enterApp(context, user);
+                    messenger.showSnackBar(SnackBar(content: Text(sent)));
+                  } catch (e) {
+                    if (context.mounted) messenger.showSnackBar(SnackBar(content: Text(context.tr(authMessage(e)))));
+                  }
                 },
                 child: Text(context.tr('resendOtp')),
               ),
@@ -245,6 +263,9 @@ class _OtpScreenState extends State<OtpScreen> {
     );
   }
 }
+
+/// Message key for a sign-in error.
+String authMessage(Object e) => e is AuthFailure ? e.messageKey : 'signInFailed';
 
 class _GoogleG extends StatelessWidget {
   const _GoogleG();

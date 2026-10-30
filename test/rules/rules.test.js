@@ -126,7 +126,8 @@ describe('monthly constituency polls', () => {
   });
 
   test('featured polls use shards', async () => {
-    await assertSucceeds(voteBatch(db('alice'), 'alice', 'f-vote-for-cm', 's4', 2).commit());
+    await assertSucceeds(voteBatch(db('alice'), 'alice', 'f-vote-for-cm', `${M}-s4`, 2).commit());
+    await assertFails(voteBatch(db('carol'), 'carol', 'f-vote-for-cm', '2020-01-s4', 2).commit());
     await assertFails(voteBatch(db('bob'), 'bob', 'f-vote-for-cm', 'mla-1', 2).commit());
   });
 });

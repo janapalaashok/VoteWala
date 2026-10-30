@@ -10,6 +10,7 @@ import '../state/app_state.dart';
 import '../theme.dart';
 import '../utils.dart';
 import '../widgets/common.dart';
+import '../widgets/vote_flow.dart';
 import 'candidate_detail_screen.dart';
 import 'home_screen.dart';
 import 'live_results_screen.dart';
@@ -111,11 +112,8 @@ class _PollTabState extends State<_PollTab> {
       ),
     );
     if (ok != true || !mounted) return;
-    if (!AppScope.read(context).castVote(candidate)) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      backgroundColor: AppColors.green,
-      content: Text(context.tr('voteRecorded')),
-    ));
+    final state = AppScope.read(context);
+    if (await submitVote(context, () => state.castVote(candidate)) == null || !mounted) return;
     Navigator.of(context).push(
       MaterialPageRoute<void>(builder: (_) => LiveResultsScreen(constituency: widget.constituency, justVoted: true)),
     );

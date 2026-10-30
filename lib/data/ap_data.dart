@@ -182,6 +182,14 @@ class ApData {
     return list[int.parse(parts.last) - 1];
   }
 
+  static Constituency? byIdOrNull(String id) {
+    final m = RegExp(r'^(mla|mp)-(\d+)$').firstMatch(id);
+    if (m == null) return null;
+    final list = m[1] == 'mp' ? mp : mla;
+    final no = int.parse(m[2]!);
+    return no >= 1 && no <= list.length ? list[no - 1] : null;
+  }
+
   static Constituency? pcFor(Constituency ac) => ac.pcNo == null ? null : mp[ac.pcNo! - 1];
 
   static Constituency _mla(int no, String raw) {

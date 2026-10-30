@@ -3,7 +3,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "firebase emulators:exec --only firestore --project demo-votewala 'node --test'"
+    "test": "firebase emulators:exec --only firestore --project demo-votewala 'node --test'",
+    "test:app": "firebase emulators:exec --only firestore --project demo-votewala 'cd ../.. && flutter test test/emulator_test.dart'"
   },
   "devDependencies": {
     "@firebase/rules-unit-testing": "^4.0.1",
