@@ -1,2 +1,3 @@
 # Changing this file deploys the website to Cloud Run (approved releases only).
 2026-10-30 first Cloud Run release
+2026-10-30 Google sign-in release

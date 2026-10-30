@@ -28,9 +28,13 @@ s = requests.Session()
 s.headers["Authorization"] = f"Bearer {creds.token}"
 
 
+class Failed(Exception):
+    pass
+
+
 def check(r):
     if r.status_code >= 300:
-        sys.exit(f"{r.request.method} {r.url} -> {r.status_code}\n{r.text[:2000]}")
+        raise Failed(f"{r.request.method} {r.url} -> {r.status_code}\n{r.text[:2000]}")
     return r.json() if r.text else {}
 
 
@@ -48,5 +52,12 @@ def publish(release, file):
     print(f"{release}: now {ruleset}")
 
 
-publish("cloud.firestore", "firestore.rules")
-publish(f"firebase.storage/{BUCKET}", "storage.rules")
+try:
+    publish("cloud.firestore", "firestore.rules")
+except Failed as e:
+    sys.exit(f"Firestore rules NOT published:\n{e}")
+try:
+    publish(f"firebase.storage/{BUCKET}", "storage.rules")
+except Failed as e:
+    # Storage needs the Blaze plan; photo uploads stay off until it is enabled.
+    print(f"::warning::Storage rules not published (is Storage enabled?): {e}")

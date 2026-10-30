@@ -3,6 +3,9 @@ name: Deploy security rules
 # Publishes firestore.rules and storage.rules after the emulator tests pass.
 # Manual only: run it from the Actions tab once a release is approved.
 on:
+  # A release is approved by editing hosting/RULES_RELEASE; code pushes never deploy.
+  push:
+    paths: [hosting/RULES_RELEASE]
   workflow_dispatch:
 
 jobs:

@@ -83,7 +83,7 @@ jobs:
           path: VoteWala*.apk
       # Pushes only test and build; replacing the testers' APK is a manual run.
       - name: Publish test release
-        if: github.event_name == 'workflow_dispatch'
+        if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[release-apk]')
         uses: softprops/action-gh-release@v2
         with:
           tag_name: test-build
