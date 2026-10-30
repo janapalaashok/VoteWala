@@ -9,6 +9,9 @@ name: Deploy website (Cloud Run)
 # Service Account User. One-time: enable the Cloud Run and Artifact Registry APIs.
 # See docs/GCP_HOSTING.md.
 on:
+  # A release is approved by editing hosting/RELEASE; code pushes never deploy.
+  push:
+    paths: [hosting/RELEASE]
   workflow_dispatch:
     inputs:
       site_url:
