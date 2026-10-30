@@ -1,0 +1,17 @@
+name: Firebase app IDs
+
+# Prints the web and Android app IDs and registers the Android app's test-key
+# fingerprints (needed for phone OTP). Deploys nothing.
+on:
+  workflow_dispatch:
+
+jobs:
+  apps:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          pip install google-auth requests
+          python3 tools/firebase_apps.py
