@@ -1,11 +1,25 @@
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
+    function isAdmin() {
+      return request.auth != null
+        && firestore.exists(/databases/(default)/documents/admins/$(request.auth.uid));
+    }
+
+    // Voters' evidence photos: private. Only the owner uploads (once, as a
+    // JPEG/PNG/WebP under 5 MB); only admins and the owner can view.
+    match /issue-photos/{uid}/{file} {
+      allow read: if isAdmin() || (request.auth != null && request.auth.uid == uid);
+      allow create: if request.auth != null && request.auth.uid == uid
+        && request.resource.size < 5 * 1024 * 1024
+        && request.resource.contentType.matches('image/(jpeg|png|webp)');
+      allow update, delete: if isAdmin();
+    }
+
     // Logos, candidate photos and poll images: public read, admin upload.
     match /{folder}/{file} {
-      allow read: if true;
-      allow write: if request.auth != null
-        && firestore.exists(/databases/(default)/documents/admins/$(request.auth.uid))
+      allow read: if folder != 'issue-photos';
+      allow write: if isAdmin()
         && request.resource.size < 5 * 1024 * 1024
         && request.resource.contentType.matches('image/.*');
     }
