@@ -115,6 +115,7 @@ class _ResultsScreenState extends State<ResultsScreen> {
                 ]),
                 const SizedBox(height: 12),
                 SeatTallyView(tally, majority: total ~/ 2 + 1),
+                ResultsDisclaimer(participants: tally.votes),
               ]),
             ),
             const SizedBox(height: 10),

@@ -16,6 +16,7 @@ import 'browse_screens.dart';
 import 'constituency_detail_screen.dart';
 import 'featured_poll_screen.dart';
 import 'main_shell.dart';
+import 'my_constituency_screen.dart';
 
 void openConstituency(BuildContext context, Constituency c, {int tab = 0}) => Navigator.of(context).push(
       MaterialPageRoute<void>(builder: (_) => ConstituencyDetailScreen(constituency: c, initialTab: tab)),
@@ -96,6 +97,8 @@ class HomeScreen extends StatelessWidget {
                   const MonthlyVotesCard(),
                   const SizedBox(height: 8),
                 ],
+                const YourConstituencyCard(),
+                const SizedBox(height: 8),
                 if (home.showTopSeats) ...[
                   SectionHeader(context.tr('topMlaSeats'),
                       action: context.tr('viewAll'), onAction: () => shell?.go(ShellTab.mla)),
@@ -403,8 +406,10 @@ class PollCard extends StatelessWidget {
         Row(children: [
           Expanded(
             child: Text(
-              '${leader.name(te)} (${leader.party.shortName(te)}) ${context.tr('leading')} · '
-              '${formatCompact(snapshot.total)} ${context.tr('votes')}',
+              snapshot.hasVotes
+                  ? '${leader.name(te)} (${leader.party.shortName(te)}) ${context.tr('leading')} · '
+                      '${formatCompact(snapshot.total)} ${context.tr('votes')}'
+                  : context.tr('beFirst'),
               style: const TextStyle(fontSize: 12.5, color: AppColors.muted),
             ),
           ),

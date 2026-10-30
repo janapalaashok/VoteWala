@@ -17,6 +17,7 @@ import '../browse_screens.dart';
 import '../featured_poll_screen.dart';
 import '../home_screen.dart';
 import '../main_shell.dart';
+import '../my_constituency_screen.dart';
 
 const _maxWidth = 1240.0;
 
@@ -61,6 +62,7 @@ class DesktopHome extends StatelessWidget {
           ),
         ]),
       ),
+      const _Section(top: 28, child: YourConstituencyCard()),
       if (home.showFeatured && featuredPolls.isNotEmpty)
         _Section(
           title: context.tr('featuredPolls'),
@@ -446,9 +448,12 @@ class _SeatRow extends StatelessWidget {
               ShareBar(snapshot, height: 7),
               const SizedBox(height: 6),
               Text(
-                '${leader.party.shortName(te)} ${context.tr('leading')} ${(snapshot.share(snapshot.leader) * 100).toStringAsFixed(1)}% · '
-                '${formatCompact(snapshot.total)} ${context.tr('votes')}',
-                style: TextStyle(color: leader.party.color, fontWeight: FontWeight.w700, fontSize: 12.5),
+                snapshot.hasVotes
+                    ? '${leader.party.shortName(te)} ${context.tr('leading')} ${(snapshot.share(snapshot.leader) * 100).toStringAsFixed(1)}% · '
+                        '${formatCompact(snapshot.total)} ${context.tr('votes')}'
+                    : context.tr('beFirst'),
+                style: TextStyle(
+                    color: snapshot.hasVotes ? leader.party.color : AppColors.muted, fontWeight: FontWeight.w700, fontSize: 12.5),
               ),
             ]),
           ),

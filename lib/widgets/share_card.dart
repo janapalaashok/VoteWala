@@ -6,7 +6,11 @@ import 'package:flutter/services.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:share_plus/share_plus.dart';
 
+import 'package:url_launcher/url_launcher.dart';
+
+import '../admin/file_pick.dart';
 import '../data/ap_data.dart';
+import '../data/civic.dart';
 import '../data/featured_polls.dart';
 import '../data/poll_month.dart';
 import '../l10n/strings.dart';
@@ -40,10 +44,13 @@ class ShareCardData {
     required this.hook,
     required this.link,
     required this.text,
+    this.myChoice,
   });
 
   final String headline;
   final String title;
+
+  /// The poll question.
   final String subtitle;
   final List<ShareRow> rows;
   final String hook;
@@ -51,28 +58,36 @@ class ShareCardData {
 
   /// Message posted with the image.
   final String text;
+
+  /// The voter's own option, only when they choose to show it.
+  final String? myChoice;
 }
+
+/// Builds the card; [showChoice] adds the voter's own option.
+typedef ShareCardBuilder = ShareCardData Function(bool showChoice);
 
 /// The hook line that makes viewers want to vote.
 String _hook(BuildContext context, String leader, double margin) => margin < 0.05
     ? context.tr('hookTight')
     : context.tr('hookLead', {'name': leader, 'n': (margin * 100).toStringAsFixed(0)});
 
-ShareCardData constituencyShareData(BuildContext context, Constituency c) {
+ShareCardData constituencyShareData(BuildContext context, Constituency c, {bool showChoice = false}) {
   final state = AppScope.read(context);
   final te = context.isTelugu;
   final snap = state.snapshot(c);
   final order = snap.ranking;
   final top = [for (final i in order.take(2)) snap.candidates[i]];
   final margin = snap.share(order[0]) - snap.share(order[1]);
-  final hook = _hook(context, top.first.name(te), margin);
-  final voted = state.choiceIndex(c) != null;
+  final hook = snap.hasVotes ? _hook(context, top.first.name(te), margin) : context.tr('hookFirst');
+  final mine = state.choiceIndex(c);
+  final voted = mine != null;
   final type = c.isMla ? 'MLA' : 'MP';
   final link = constituencyLink(c);
   return ShareCardData(
-    headline: context.tr(voted ? 'shareHeadline' : 'shareHeadlineView'),
+    headline: voted ? civic.shareMessage(te) : context.tr('shareHeadlineView'),
     title: c.name(te),
-    subtitle: '${context.tr(c.isMla ? 'assemblyConstituency' : 'parliamentConstituency')} · ${PollMonth.current().label(te)}',
+    subtitle: context.tr(c.isMla ? 'questionMla' : 'questionMp', {'name': c.name(te), 'month': PollMonth.current().label(te)}),
+    myChoice: showChoice && voted ? snap.candidates[mine].name(te) : null,
     rows: [
       for (var k = 0; k < top.length; k++)
         ShareRow(
@@ -88,15 +103,17 @@ ShareCardData constituencyShareData(BuildContext context, Constituency c) {
   );
 }
 
-ShareCardData featuredShareData(BuildContext context, FeaturedPoll p, List<int> totals, Color Function(int) colorOf) {
+ShareCardData featuredShareData(BuildContext context, FeaturedPoll p, List<int> totals, Color Function(int) colorOf,
+    {bool showChoice = false}) {
   final state = AppScope.read(context);
   final te = context.isTelugu;
   final total = totals.fold(0, (a, b) => a + b);
   final order = List.generate(totals.length, (i) => i)..sort((a, b) => totals[b].compareTo(totals[a]));
   double share(int i) => total == 0 ? 0 : totals[i] / total;
   final margin = order.length < 2 ? 1.0 : share(order[0]) - share(order[1]);
-  final hook = _hook(context, p.options[order.first].label(te), margin);
-  final voted = state.featuredChoice(p) != null;
+  final hook = total == 0 ? context.tr('hookFirst') : _hook(context, p.options[order.first].label(te), margin);
+  final mine = state.featuredChoice(p);
+  final voted = mine != null;
   final link = featuredLink(p);
   Widget avatar(int i) {
     final o = p.options[i];
@@ -110,9 +127,10 @@ ShareCardData featuredShareData(BuildContext context, FeaturedPoll p, List<int> 
   }
 
   return ShareCardData(
-    headline: context.tr(voted ? 'shareHeadline' : 'shareHeadlineView'),
+    headline: voted ? civic.shareMessage(te) : context.tr('shareHeadlineView'),
     title: p.title(te),
     subtitle: p.question(te),
+    myChoice: showChoice && voted ? p.options[mine].label(te) : null,
     rows: [for (final i in order.take(2)) ShareRow(p.options[i].label(te), share(i), colorOf(i), avatar(i))],
     hook: hook,
     link: link,
@@ -171,7 +189,9 @@ class ShareCard extends StatelessWidget {
               ]),
               const SizedBox(height: 16),
               Text(data.headline,
-                  style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w900, height: 1.1)),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w900, height: 1.1)),
               const SizedBox(height: 6),
               ShaderMask(
                 shaderCallback: (r) => const LinearGradient(colors: [Color(0xFFFF9A3D), Color(0xFFF6B21A)]).createShader(r),
@@ -193,6 +213,22 @@ class ShareCard extends StatelessWidget {
                   border: Border.all(color: Colors.white.withValues(alpha: 0.22)),
                 ),
                 child: Column(children: [
+                  if (data.myChoice != null)
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 10),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(color: const Color(0xFF22C55E).withValues(alpha: 0.18), borderRadius: BorderRadius.circular(10)),
+                      child: Row(children: [
+                        const Icon(Icons.how_to_vote, size: 15, color: Color(0xFF86EFAC)),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(context.tr('myChoiceOnCard', {'x': data.myChoice!}),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 12)),
+                        ),
+                      ]),
+                    ),
                   for (final r in data.rows) _row(r),
                   const SizedBox(height: 2),
                   Text(data.hook,
@@ -296,24 +332,29 @@ class _MapPainter extends CustomPainter {
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
-/// Bottom sheet with the card preview and share / copy-link actions.
-Future<void> showShareSheet(BuildContext context, ShareCardData data) {
+/// Bottom sheet with the card preview and share / WhatsApp / download /
+/// copy-link actions. Voters can choose to show their own choice.
+Future<void> showShareSheet(BuildContext context, ShareCardBuilder build, {bool canShowChoice = false}) {
   return showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.white,
     shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
-    builder: (_) => _ShareSheet(data: data),
+    builder: (_) => _ShareSheet(build: build, canShowChoice: canShowChoice),
   );
 }
 
-Future<void> shareConstituency(BuildContext context, Constituency c) =>
-    showShareSheet(context, constituencyShareData(context, c));
+Future<void> shareConstituency(BuildContext context, Constituency c) => showShareSheet(
+      context,
+      (show) => constituencyShareData(context, c, showChoice: show),
+      canShowChoice: AppScope.read(context).choiceIndex(c) != null,
+    );
 
 class _ShareSheet extends StatefulWidget {
-  const _ShareSheet({required this.data});
+  const _ShareSheet({required this.build, required this.canShowChoice});
 
-  final ShareCardData data;
+  final ShareCardBuilder build;
+  final bool canShowChoice;
 
   @override
   State<_ShareSheet> createState() => _ShareSheetState();
@@ -322,6 +363,9 @@ class _ShareSheet extends StatefulWidget {
 class _ShareSheetState extends State<_ShareSheet> {
   final _key = GlobalKey();
   bool _busy = false;
+  late bool _showChoice = widget.canShowChoice && civic.shareShowChoiceDefault;
+
+  ShareCardData get _data => widget.build(_showChoice);
 
   Future<Uint8List?> _capture() async {
     final boundary = _key.currentContext?.findRenderObject() as RenderRepaintBoundary?;
@@ -331,75 +375,129 @@ class _ShareSheetState extends State<_ShareSheet> {
     return bytes?.buffer.asUint8List();
   }
 
-  Future<void> _share(BuildContext buttonContext) async {
+  Future<void> _run(Future<void> Function() action) async {
     setState(() => _busy = true);
-    final box = buttonContext.findRenderObject() as RenderBox?;
-    final origin = box == null ? null : box.localToGlobal(Offset.zero) & box.size;
     try {
-      final png = await _capture();
-      await SharePlus.instance.share(ShareParams(
-        text: widget.data.text,
-        files: png == null ? null : [XFile.fromData(png, mimeType: 'image/png', name: 'votewala-poll.png')],
-        fileNameOverrides: png == null ? null : ['votewala-poll.png'],
-        sharePositionOrigin: origin,
-        downloadFallbackEnabled: true,
-      ));
-    } catch (_) {
+      await action();
+    } catch (e) {
+      debugPrint('Share failed: $e');
       await _copy();
     } finally {
       if (mounted) setState(() => _busy = false);
     }
   }
 
+  Future<void> _share(BuildContext buttonContext) => _run(() async {
+        final box = buttonContext.findRenderObject() as RenderBox?;
+        final origin = box == null ? null : box.localToGlobal(Offset.zero) & box.size;
+        final png = await _capture();
+        await SharePlus.instance.share(ShareParams(
+          text: _data.text,
+          files: png == null ? null : [XFile.fromData(png, mimeType: 'image/png', name: 'votewala-poll.png')],
+          fileNameOverrides: png == null ? null : ['votewala-poll.png'],
+          sharePositionOrigin: origin,
+          downloadFallbackEnabled: true,
+        ));
+      });
+
+  /// WhatsApp takes text and a link; the card image goes through Share.
+  Future<void> _whatsApp() => _run(() async {
+        final url = Uri.parse('https://wa.me/?text=${Uri.encodeComponent(_data.text)}');
+        if (!await launchUrl(url, mode: LaunchMode.externalApplication)) throw StateError('no WhatsApp');
+      });
+
+  Future<void> _download() => _run(() async {
+        final png = await _capture();
+        if (png == null) return;
+        if (!downloadBytes('votewala-poll.png', png, 'image/png')) {
+          // Apps: the system sheet offers "Save to device" / Files / Drive.
+          await SharePlus.instance.share(ShareParams(
+            files: [XFile.fromData(png, mimeType: 'image/png', name: 'votewala-poll.png')],
+            fileNameOverrides: const ['votewala-poll.png'],
+          ));
+        }
+      });
+
   Future<void> _copy() async {
     final messenger = ScaffoldMessenger.of(context);
     final msg = context.tr('linkCopied');
-    await Clipboard.setData(ClipboardData(text: widget.data.text));
+    await Clipboard.setData(ClipboardData(text: _data.link));
     messenger.showSnackBar(SnackBar(content: Text(msg)));
   }
 
   @override
-  Widget build(BuildContext context) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-            Container(width: 40, height: 4, decoration: BoxDecoration(color: AppColors.border, borderRadius: BorderRadius.circular(2))),
-            const SizedBox(height: 14),
-            Text(context.tr('shareTitle'), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
-            const SizedBox(height: 4),
-            Text(context.tr('shareSub'), textAlign: TextAlign.center, style: const TextStyle(color: AppColors.muted, fontSize: 13)),
-            const SizedBox(height: 14),
-            ConstrainedBox(
-              constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.55, maxWidth: 360),
-              child: FittedBox(child: RepaintBoundary(key: _key, child: ShareCard(widget.data))),
-            ),
-            const SizedBox(height: 16),
-            ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 420),
-              child: Row(children: [
-                Expanded(
-                  flex: 2,
-                  child: Builder(
-                    builder: (b) => FilledButton.icon(
-                      onPressed: _busy ? null : () => _share(b),
-                      icon: _busy
-                          ? const SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                          : const Icon(Icons.ios_share),
-                      label: Text(context.tr('share')),
-                    ),
-                  ),
+  Widget build(BuildContext context) {
+    final data = _data;
+    Widget action(IconData icon, String label, VoidCallback? onTap, {Color? color}) => Expanded(
+          child: InkWell(
+            borderRadius: BorderRadius.circular(14),
+            onTap: _busy ? null : onTap,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Column(children: [
+                CircleAvatar(
+                  radius: 22,
+                  backgroundColor: (color ?? AppColors.ink).withValues(alpha: 0.1),
+                  child: Icon(icon, color: color ?? AppColors.ink),
                 ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: _copy,
-                    icon: const Icon(Icons.link),
-                    label: Text(context.tr('copyLink')),
-                  ),
-                ),
+                const SizedBox(height: 6),
+                Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
               ]),
             ),
-          ]),
-        ),
-      );
+          ),
+        );
+    return SafeArea(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          Container(width: 40, height: 4, decoration: BoxDecoration(color: AppColors.border, borderRadius: BorderRadius.circular(2))),
+          const SizedBox(height: 14),
+          Text(context.tr('shareTitle'), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+          const SizedBox(height: 4),
+          Text(context.tr(_showChoice ? 'shareSubChoice' : 'shareSub'),
+              textAlign: TextAlign.center, style: const TextStyle(color: AppColors.muted, fontSize: 13)),
+          const SizedBox(height: 14),
+          ConstrainedBox(
+            constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.5, maxWidth: 360),
+            child: FittedBox(child: RepaintBoundary(key: _key, child: ShareCard(data))),
+          ),
+          if (widget.canShowChoice)
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 420),
+              child: SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                value: _showChoice,
+                onChanged: (v) => setState(() => _showChoice = v),
+                title: Text(context.tr('showMyChoice'), style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+              ),
+            )
+          else
+            const SizedBox(height: 12),
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 420),
+            child: Column(children: [
+              SizedBox(
+                width: double.infinity,
+                child: Builder(
+                  builder: (b) => FilledButton.icon(
+                    onPressed: _busy ? null : () => _share(b),
+                    icon: _busy
+                        ? const SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                        : const Icon(Icons.ios_share),
+                    label: Text(context.tr('share')),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Row(children: [
+                action(Icons.chat, 'WhatsApp', _whatsApp, color: const Color(0xFF25D366)),
+                action(Icons.download, context.tr('download'), _download),
+                action(Icons.link, context.tr('copyLink'), _copy),
+              ]),
+            ]),
+          ),
+        ]),
+      ),
+    );
+  }
 }

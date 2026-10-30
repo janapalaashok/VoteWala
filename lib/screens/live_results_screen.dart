@@ -74,7 +74,8 @@ class _LiveResultsScreenState extends State<LiveResultsScreen> {
               const SizedBox(height: 10),
               for (final i in snapshot.ranking)
                 ResultRow(snapshot: snapshot, index: i, highlight: i == snapshot.leader),
-              const SizedBox(height: 14),
+              ResultsDisclaimer(participants: snapshot.total),
+              const SizedBox(height: 4),
               ShareInviteButton(onPressed: () => shareConstituency(context, c)),
               const SizedBox(height: 16),
               AppCard(

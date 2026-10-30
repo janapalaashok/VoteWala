@@ -69,15 +69,19 @@ class FeaturedPollCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(4),
           child: SizedBox(
             height: 8,
-            child: Row(children: [
-              for (final i in _ranking(totals))
-                Expanded(flex: totals[i].clamp(1, 1 << 30), child: Container(color: optionColor(poll, i))),
-            ]),
+            child: total == 0
+                ? const ColoredBox(color: AppColors.border)
+                : Row(children: [
+                    for (final i in _ranking(totals))
+                      Expanded(flex: totals[i].clamp(1, 1 << 30), child: Container(color: optionColor(poll, i))),
+                  ]),
           ),
         ),
         const SizedBox(height: 10),
         Text(
-          context.tr('leadingNow', {'x': '${poll.options[lead].label(te)} ${_pct(totals[lead], total)}%'}),
+          total == 0
+              ? context.tr('beFirst')
+              : context.tr('leadingNow', {'x': '${poll.options[lead].label(te)} ${_pct(totals[lead], total)}%'}),
           style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
         ),
         const SizedBox(height: 2),
@@ -172,7 +176,12 @@ class _FeaturedPollScreenState extends State<FeaturedPollScreen> {
 
   void _share() {
     final poll = widget.poll;
-    showShareSheet(context, featuredShareData(context, poll, AppScope.read(context).featuredTotals(poll), (i) => optionColor(poll, i)));
+    final state = AppScope.read(context);
+    showShareSheet(
+      context,
+      (show) => featuredShareData(context, poll, state.featuredTotals(poll), (i) => optionColor(poll, i), showChoice: show),
+      canShowChoice: state.featuredChoice(poll) != null,
+    );
   }
 
   @override
@@ -311,6 +320,7 @@ class _FeaturedPollScreenState extends State<FeaturedPollScreen> {
                 ),
               Text(context.tr('totalSoFar', {'n': formatIndian(total)}),
                   style: const TextStyle(color: AppColors.muted, fontSize: 12.5)),
+              ResultsDisclaimer(participants: total),
             ],
             if (poll.hasMonthlyUpdates) ...[
               const SizedBox(height: 16),

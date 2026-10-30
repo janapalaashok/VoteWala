@@ -4,6 +4,7 @@ import '../l10n/strings.dart';
 import '../state/app_state.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
+import 'achievements_screen.dart';
 import 'info_screens.dart';
 import 'welcome_screen.dart';
 
@@ -126,6 +127,7 @@ class ProfileScreen extends StatelessWidget {
                 ),
               ]),
             ),
+            const Padding(padding: EdgeInsets.fromLTRB(16, 0, 16, 12), child: AchievementsStrip()),
             const Divider(),
             item(Icons.how_to_vote_outlined, context.tr('myParticipation'),
                 () => _push(context, const MyParticipationScreen()),

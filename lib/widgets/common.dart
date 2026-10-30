@@ -487,13 +487,15 @@ class ShareBar extends StatelessWidget {
         borderRadius: BorderRadius.circular(height / 2),
         child: SizedBox(
           height: height,
-          child: Row(children: [
-            for (final i in snapshot.ranking)
-              Expanded(
-                flex: (snapshot.share(i) * 1000).round().clamp(1, 1000),
-                child: Container(color: snapshot.candidates[i].party.color),
-              ),
-          ]),
+          child: snapshot.hasVotes
+              ? Row(children: [
+                  for (final i in snapshot.ranking)
+                    Expanded(
+                      flex: (snapshot.share(i) * 1000).round().clamp(1, 1000),
+                      child: Container(color: snapshot.candidates[i].party.color),
+                    ),
+                ])
+              : const ColoredBox(color: AppColors.border),
         ),
       );
 }
@@ -583,7 +585,7 @@ class ConstituencyTile extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         child: Row(children: [
-          PartyDot(snapshot.leadingParty.color),
+          PartyDot(snapshot.hasVotes ? snapshot.leadingParty.color : AppColors.grey),
           const SizedBox(width: 14),
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -599,4 +601,26 @@ class ConstituencyTile extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Required note under results: who the numbers come from, and what they are not.
+class ResultsDisclaimer extends StatelessWidget {
+  const ResultsDisclaimer({super.key, required this.participants});
+
+  final int participants;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          const Icon(Icons.info_outline, size: 16, color: AppColors.muted),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              context.tr('disclaimer', {'n': formatIndian(participants)}),
+              style: const TextStyle(color: AppColors.muted, fontSize: 11.5, height: 1.4),
+            ),
+          ),
+        ]),
+      );
 }

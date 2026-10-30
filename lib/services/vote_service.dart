@@ -33,7 +33,7 @@ class VoteException implements Exception {
   String get messageKey => switch (error) {
         VoteError.notSignedIn => 'signInToVote',
         VoteError.alreadyVoted => 'alreadyVotedMonth',
-        VoteError.closed => 'pollClosed',
+        VoteError.closed => 'pollClosedMsg',
         VoteError.rejected => 'voteRejected',
         VoteError.network => 'networkError',
       };

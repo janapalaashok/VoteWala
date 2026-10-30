@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:js_interop';
+import 'dart:typed_data';
 
 import 'package:web/web.dart' as web;
 
@@ -32,6 +33,17 @@ void downloadText(String filename, String text) {
     ..download = filename
     ..click();
   web.URL.revokeObjectURL(url);
+}
+
+bool downloadBytes(String filename, Uint8List bytes, String contentType) {
+  final blob = web.Blob([bytes.toJS].toJS, web.BlobPropertyBag(type: contentType));
+  final url = web.URL.createObjectURL(blob);
+  web.HTMLAnchorElement()
+    ..href = url
+    ..download = filename
+    ..click();
+  web.URL.revokeObjectURL(url);
+  return true;
 }
 
 void openAdminConsole() {

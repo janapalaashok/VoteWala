@@ -50,7 +50,7 @@ class ConstituencyDetailScreen extends StatelessWidget {
                     Text(c.name(!te), style: const TextStyle(fontSize: 16, color: AppColors.muted)),
                   ]),
                 ),
-                PartyDot(snapshot.leadingParty.color, size: 36),
+                PartyDot(snapshot.hasVotes ? snapshot.leadingParty.color : AppColors.grey, size: 36),
               ]),
             ),
             TabBar(isScrollable: true, tabAlignment: TabAlignment.start, tabs: [
@@ -380,7 +380,7 @@ class _ResultsTab extends StatelessWidget {
       ]),
       const SizedBox(height: 8),
       for (final i in snapshot.ranking) ResultRow(snapshot: snapshot, index: i, highlight: i == snapshot.leader),
-      const SizedBox(height: 12),
+      ResultsDisclaimer(participants: snapshot.total),
       OutlinedButton.icon(
         onPressed: () => Navigator.of(context)
             .push(MaterialPageRoute<void>(builder: (_) => LiveResultsScreen(constituency: constituency))),

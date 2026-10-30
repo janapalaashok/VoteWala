@@ -9,6 +9,7 @@ import '../config/config_service.dart';
 import '../data/ap_data.dart';
 import '../data/civic.dart';
 import '../data/featured_polls.dart';
+import '../data/grievance.dart';
 import '../data/poll_month.dart';
 import '../data/poll_repository.dart';
 import '../services/auth_service.dart';
@@ -439,6 +440,24 @@ class AppState extends ChangeNotifier {
       for (final e in _all(PollIds.priority(m), month: m).entries)
         e.key: [for (var i = 0; i < civic.priorities.length; i++) e.value['o$i'] ?? 0],
     };
+  }
+
+  // --- Grievances raised to representatives (public status). ---
+
+  List<Grievance>? _grievances;
+  DateTime? _grievancesAt;
+
+  /// Public grievance statuses, newest first; loaded in the background.
+  List<Grievance> get grievances {
+    if (_grievancesAt == null || DateTime.now().difference(_grievancesAt!) > tallyTtl) {
+      _grievancesAt = DateTime.now();
+      unawaited(votes.store.list('grievances').then((docs) {
+        _grievances = [for (final e in docs.entries) Grievance.fromFields(e.key, e.value)]
+          ..sort((a, b) => (b.updatedAt ?? DateTime(0)).compareTo(a.updatedAt ?? DateTime(0)));
+        notifyListeners();
+      }).catchError((Object e) => debugPrint('Grievances failed: $e')));
+    }
+    return _grievances ?? const [];
   }
 
   // --- Saved candidates and settings. ---
