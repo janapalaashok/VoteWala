@@ -51,13 +51,23 @@ class FirebaseAuthService implements AuthService {
   @override
   bool get supportsPhone => const bool.fromEnvironment('PHONE_LOGIN');
 
-  static AppUser _toUser(User u) => AppUser(
-        uid: u.uid,
-        name: u.displayName ?? 'Voter',
-        email: u.email,
-        phone: u.phoneNumber,
-        provider: u.phoneNumber != null ? 'phone' : 'google',
-      );
+  static AppUser _toUser(User u) {
+    final providers = {for (final p in u.providerData) p.providerId};
+    return AppUser(
+      uid: u.uid,
+      name: u.displayName ?? u.email?.split('@').first ?? 'Voter',
+      email: u.email,
+      phone: u.phoneNumber,
+      provider: providers.contains('google.com')
+          ? 'google'
+          : providers.contains('phone')
+              ? 'phone'
+              : 'password',
+      // Phone accounts have no email to verify.
+      emailVerified: u.emailVerified || providers.contains('phone'),
+      hasPassword: providers.contains('password'),
+    );
+  }
 
   @override
   Future<AppUser?> restore() async {
@@ -71,6 +81,44 @@ class FirebaseAuthService implements AuthService {
         final provider = GoogleAuthProvider()..setCustomParameters({'prompt': 'select_account'});
         // Web: popup. Android/iOS: the system browser's Google sign-in page.
         final cred = kIsWeb ? await _auth.signInWithPopup(provider) : await _auth.signInWithProvider(provider);
+        return _toUser(cred.user!);
+      });
+
+  @override
+  Future<AppUser> signInWithEmail(String email, String password) => _guard(() async {
+        final cred = await _auth.signInWithEmailAndPassword(email: email.trim(), password: password);
+        return _toUser(cred.user!);
+      });
+
+  @override
+  Future<AppUser> registerWithEmail(String email, String password) => _guard(() async {
+        final cred = await _auth.createUserWithEmailAndPassword(email: email.trim(), password: password);
+        await cred.user!.sendEmailVerification();
+        return _toUser(cred.user!);
+      });
+
+  @override
+  Future<void> sendPasswordReset(String email) => _guard(() => _auth.sendPasswordResetEmail(email: email.trim()));
+
+  @override
+  Future<void> sendVerificationEmail() => _guard(() async => _auth.currentUser?.sendEmailVerification());
+
+  @override
+  Future<AppUser?> reloadUser() => _guard(() async {
+        final u = _auth.currentUser;
+        if (u == null) return null;
+        await u.reload();
+        final fresh = _auth.currentUser!;
+        // New token so the database sees email_verified.
+        if (fresh.emailVerified) await fresh.getIdToken(true);
+        return _toUser(fresh);
+      });
+
+  @override
+  Future<AppUser> setPassword(String password) => _guard(() async {
+        final u = _auth.currentUser;
+        if (u == null || u.email == null) throw const AuthFailure('signInFailed');
+        final cred = await u.linkWithCredential(EmailAuthProvider.credential(email: u.email!, password: password));
         return _toUser(cred.user!);
       });
 
@@ -135,11 +183,19 @@ class FirebaseAuthService implements AuthService {
       debugPrint('Auth failed: ${e.code} ${e.message}');
       throw AuthFailure(switch (e.code) {
         'invalid-phone-number' => 'invalidPhone',
-        'invalid-verification-code' || 'invalid-credential' => 'invalidOtp',
+        'invalid-verification-code' => 'invalidOtp',
+        'invalid-credential' => 'wrongEmailPassword',
         'session-expired' || 'code-expired' => 'otpExpired',
         'too-many-requests' || 'quota-exceeded' => 'tooManyAttempts',
         'network-request-failed' => 'networkError',
-        'popup-closed-by-user' || 'cancelled-popup-request' => 'signInCancelled',
+        'popup-closed-by-user' || 'cancelled-popup-request' || 'web-context-canceled' => 'signInCancelled',
+        'email-already-in-use' => 'emailInUse',
+        'wrong-password' || 'user-not-found' || 'invalid-login-credentials' => 'wrongEmailPassword',
+        'weak-password' => 'weakPassword',
+        'invalid-email' => 'invalidEmail',
+        'requires-recent-login' => 'reloginNeeded',
+        'provider-already-linked' => 'passwordAlreadySet',
+        'operation-not-allowed' => 'methodDisabled',
         _ => 'signInFailed',
       }, '${e.code}: ${e.message}');
     }

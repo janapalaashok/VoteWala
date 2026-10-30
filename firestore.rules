@@ -30,6 +30,13 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    // Voters: Google accounts and email accounts with a verified address
+    // (or phone sign-in). Unverified email accounts can read but not vote.
+    function voter() {
+      return signedIn()
+        && (request.auth.token.email_verified == true || request.auth.token.firebase.sign_in_provider == 'phone');
+    }
+
     function isAdmin() {
       return signedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
     }
@@ -105,8 +112,8 @@ service cloud.firestore {
     match /users/{uid} {
       // Admins see vote counts (badge statistics), never ballots' choices.
       allow read: if (signedIn() && request.auth.uid == uid) || isAdmin();
-      allow create: if signedIn() && request.auth.uid == uid && countsVote(uid, {});
-      allow update: if signedIn() && request.auth.uid == uid
+      allow create: if voter() && request.auth.uid == uid && countsVote(uid, {});
+      allow update: if voter() && request.auth.uid == uid
         && request.time > resource.data.lastActionAt + duration.value(2, 's')
         && (countsVote(uid, resource.data) || addsPhoto(uid, resource.data));
       allow delete: if false;
@@ -135,7 +142,7 @@ service cloud.firestore {
 
       match /badges/{badgeId} {
         allow read: if signedIn() && request.auth.uid == uid;
-        allow create: if signedIn() && request.auth.uid == uid
+        allow create: if voter() && request.auth.uid == uid
           && request.resource.data.keys().hasOnly(['at'])
           && request.resource.data.at == request.time
           && reachedMilestone(getAfter(doc('users/' + uid)).data.voteCount, badgeId);
@@ -150,7 +157,7 @@ service cloud.firestore {
     // -------------------------------------------------------------- ballots
     match /votes/{pollId}/ballots/{uid} {
       allow read: if signedIn() && request.auth.uid == uid;
-      allow create: if signedIn() && request.auth.uid == uid
+      allow create: if voter() && request.auth.uid == uid
         && openPoll(pollId)
         && validBucket(pollId, request.resource.data.bucket)
         && request.resource.data.at == request.time
@@ -183,7 +190,7 @@ service cloud.firestore {
     // --------------------------------------------------------------- tallies
     match /tallies/{pollId}/buckets/{bucket} {
       allow read: if true;
-      allow create, update: if signedIn()
+      allow create, update: if voter()
         && ((kind(pollId) == 'issues' && (issueVote(pollId, bucket) || photoAdded(pollId, bucket)))
             || (kind(pollId) != 'issues' && optionVote(pollId, bucket)));
       allow delete: if false;
@@ -227,7 +234,7 @@ service cloud.firestore {
     // ---------------------------------------------------------------- photos
     match /photos/{id} {
       allow read: if isAdmin() || (signedIn() && resource.data.uid == request.auth.uid);
-      allow create: if signedIn() && validPhoto(id);
+      allow create: if voter() && validPhoto(id);
       allow update: if isAdmin()
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'reviewedAt'])
         && request.resource.data.status in ['pending', 'approved', 'rejected'];
@@ -257,7 +264,7 @@ service cloud.firestore {
     // includes the threshold, so each threshold event is raised only once.
     match /alerts/{id} {
       allow read, update, delete: if isAdmin();
-      allow create: if signedIn() && validAlert(id);
+      allow create: if voter() && validAlert(id);
 
       // The threshold in force for this category (settings/thresholds), default 100.
       function thresholdOk(slot, limit) {
@@ -288,7 +295,7 @@ service cloud.firestore {
 
     match /otherIssues/{id} {
       allow read: if isAdmin();
-      allow create: if signedIn()
+      allow create: if voter()
         && request.resource.data.keys().hasOnly(['pollId', 'bucket', 'text'])
         && id == request.resource.data.pollId + '_' + request.auth.uid
         && kind(request.resource.data.pollId) == 'issues'

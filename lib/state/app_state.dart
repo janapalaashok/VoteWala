@@ -16,7 +16,15 @@ import '../services/auth_service.dart';
 import '../services/vote_service.dart';
 
 class AppUser {
-  const AppUser({required this.uid, required this.name, this.email, this.phone, required this.provider});
+  const AppUser({
+    required this.uid,
+    required this.name,
+    this.email,
+    this.phone,
+    required this.provider,
+    this.emailVerified = true,
+    this.hasPassword = false,
+  });
 
   /// Firebase user id: votes are counted against it (one vote per account).
   final String uid;
@@ -24,6 +32,12 @@ class AppUser {
   final String? email;
   final String? phone;
   final String provider;
+
+  /// Email accounts must verify their address before voting.
+  final bool emailVerified;
+
+  /// Can also sign in with email + password.
+  final bool hasPassword;
 }
 
 /// A constituency vote the user cast in a monthly poll.
@@ -131,6 +145,18 @@ class AppState extends ChangeNotifier {
     _recordLoaded = false;
     notifyListeners();
     await reloadRecord();
+  }
+
+  /// Refreshes the account after the voter verified the email or set a
+  /// password; returns the updated user.
+  Future<AppUser?> refreshUser() async {
+    final u = await auth.reloadUser();
+    if (u == null) return null;
+    final wasUnverified = _user?.emailVerified == false;
+    _user = u;
+    notifyListeners();
+    if (wasUnverified && u.emailVerified) await reloadRecord();
+    return u;
   }
 
   Future<void> signOut() async {

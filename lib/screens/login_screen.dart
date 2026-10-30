@@ -109,7 +109,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     child: _busy
                         ? const SizedBox.square(dimension: 22, child: CircularProgressIndicator(strokeWidth: 2.4))
                         : Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                            const _GoogleG(),
+                            const GoogleMark(),
                             const SizedBox(width: 12),
                             Text(context.tr('continueGoogle'),
                                 style: const TextStyle(color: AppColors.ink, fontWeight: FontWeight.w700, fontSize: 16)),
@@ -284,8 +284,9 @@ class _OtpScreenState extends State<OtpScreen> {
 /// Message key for a sign-in error.
 String authMessage(Object e) => e is AuthFailure ? e.messageKey : 'signInFailed';
 
-class _GoogleG extends StatelessWidget {
-  const _GoogleG();
+/// The coloured Google "G".
+class GoogleMark extends StatelessWidget {
+  const GoogleMark({super.key});
 
   @override
   Widget build(BuildContext context) => ShaderMask(

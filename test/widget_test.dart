@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:votewala/config/app_config.dart';
@@ -197,15 +198,26 @@ void main() {
     expect(formatCompact(120000), '1.2L');
   });
 
-  testWidgets('language choice leads to login, and votes are recorded', (tester) async {
+  testWidgets('sign-in page registers or signs in, and votes are recorded', (tester) async {
     final (state, store) = await newState();
     await tester.pumpWidget(VoteWalaApp(state: state));
 
-    expect(find.text('Continue in English'), findsOneWidget);
-    await tester.tap(find.text('Continue in English'));
+    // One page: language, email sign-in / register, and Google.
+    expect(find.text('తెలుగు'), findsOneWidget);
+    expect(find.text('Forgot password?'), findsOneWidget);
+    await tester.tap(find.text('Register'));
     await tester.pumpAndSettle();
-    expect(find.text('Sign in to VoteWala'), findsOneWidget);
+    expect(find.text('Re-enter password'), findsOneWidget);
+    await tester.enterText(find.byType(TextField).at(0), 'voter@example.com');
+    await tester.enterText(find.byType(TextField).at(1), 'secret1');
+    await tester.enterText(find.byType(TextField).at(2), 'secret2');
+    await tester.ensureVisible(find.text('Create account'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Create account'));
+    await tester.pumpAndSettle();
+    expect(find.text('Passwords do not match'), findsOneWidget);
 
+    await tester.ensureVisible(find.text('Continue with Google'));
     await tester.tap(find.text('Continue with Google'));
     await tester.pump(const Duration(seconds: 1));
     await tester.pumpAndSettle();
@@ -230,7 +242,7 @@ Future<(AppState, MemoryStore)> newState() async {
   final store = MemoryStore();
   final state = AppState(
     await SharedPreferences.getInstance(),
-    auth: const DemoAuthService(),
+    auth: DemoAuthService(),
     votes: VoteService(store, MemoryPhotoStore(), minGap: Duration.zero),
   );
   return (state, store);

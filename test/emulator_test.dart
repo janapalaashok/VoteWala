@@ -30,7 +30,8 @@ String token(String uid) {
         'iat': now,
         'exp': now + 3600,
         'auth_time': now,
-        'firebase': {'sign_in_provider': 'phone'},
+        'email_verified': true,
+        'firebase': {'sign_in_provider': 'google.com'},
       })}.';
 }
 

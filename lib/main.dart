@@ -32,7 +32,7 @@ Future<void> main() async {
   final VoteService votes;
   if (_demo) {
     // UI review build: simulated sign-in, votes kept in memory only.
-    authService = const DemoAuthService();
+    authService = DemoAuthService();
     votes = VoteService(MemoryStore(), MemoryPhotoStore(), minGap: Duration.zero);
   } else {
     try {
@@ -68,7 +68,11 @@ class VoteWalaApp extends StatelessWidget {
             locale: Locale(state.language),
             supportedLocales: const [Locale('en'), Locale('te')],
             localizationsDelegates: GlobalMaterialLocalizations.delegates,
-            home: state.user == null ? const WelcomeScreen() : const MainShell(),
+            home: state.user == null
+                ? const WelcomeScreen()
+                : !state.user!.emailVerified
+                    ? const VerifyEmailScreen()
+                    : const MainShell(),
           ),
         ),
       );

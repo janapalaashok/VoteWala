@@ -5,6 +5,7 @@ import '../state/app_state.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
 import 'achievements_screen.dart';
+import 'login_screen.dart';
 import 'info_screens.dart';
 import 'welcome_screen.dart';
 
@@ -51,6 +52,60 @@ class ProfileScreen extends StatelessWidget {
       MaterialPageRoute<void>(builder: (_) => const WelcomeScreen()),
       (_) => false,
     );
+  }
+
+  /// Lets a Google user also sign in with email + password.
+  Future<void> _setPassword(BuildContext context) async {
+    final password = TextEditingController();
+    final confirm = TextEditingController();
+    final messenger = ScaffoldMessenger.of(context);
+    final state = AppScope.read(context);
+    String? error;
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setLocal) => AlertDialog(
+          title: Text(ctx.tr('setPassword')),
+          content: SizedBox(
+            width: 380,
+            child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              Text(ctx.tr('setPasswordSub', {'email': state.user?.email ?? ''}),
+                  style: const TextStyle(color: AppColors.muted, fontSize: 13)),
+              const SizedBox(height: 12),
+              TextField(controller: password, obscureText: true, decoration: InputDecoration(labelText: ctx.tr('password'))),
+              const SizedBox(height: 8),
+              TextField(controller: confirm, obscureText: true, decoration: InputDecoration(labelText: ctx.tr('confirmPassword'))),
+              if (error != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text(error!, style: const TextStyle(color: AppColors.red, fontSize: 13)),
+                ),
+            ]),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: Text(ctx.tr('cancel'))),
+            FilledButton(
+              onPressed: () async {
+                if (password.text.length < 6) return setLocal(() => error = ctx.tr('weakPassword'));
+                if (password.text != confirm.text) return setLocal(() => error = ctx.tr('passwordsDontMatch'));
+                final done = ctx.tr('passwordSet');
+                try {
+                  await state.auth.setPassword(password.text);
+                  await state.refreshUser();
+                  if (ctx.mounted) Navigator.pop(ctx);
+                  messenger.showSnackBar(SnackBar(content: Text(done)));
+                } catch (e) {
+                  setLocal(() => error = ctx.tr(authMessage(e)));
+                }
+              },
+              child: Text(ctx.tr('save')),
+            ),
+          ],
+        ),
+      ),
+    );
+    password.dispose();
+    confirm.dispose();
   }
 
   @override
@@ -129,6 +184,8 @@ class ProfileScreen extends StatelessWidget {
             ),
             const Padding(padding: EdgeInsets.fromLTRB(16, 0, 16, 12), child: AchievementsStrip()),
             const Divider(),
+            if (user != null && user.email != null && !user.hasPassword && user.provider == 'google')
+              item(Icons.password, context.tr('setPassword'), () => _setPassword(context)),
             item(Icons.how_to_vote_outlined, context.tr('myParticipation'),
                 () => _push(context, const MyParticipationScreen()),
                 trailing: '${state.voteHistory.length}'),

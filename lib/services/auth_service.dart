@@ -24,7 +24,23 @@ abstract class AuthService {
   /// The signed-in voter restored from the previous session, if any.
   Future<AppUser?> restore();
 
+  /// Signs in, or creates the account on the first sign-in.
   Future<AppUser> signInWithGoogle();
+
+  Future<AppUser> signInWithEmail(String email, String password);
+
+  /// Creates an email account and sends the verification email.
+  Future<AppUser> registerWithEmail(String email, String password);
+
+  Future<void> sendPasswordReset(String email);
+
+  Future<void> sendVerificationEmail();
+
+  /// The current user with fresh flags (verified email, password set).
+  Future<AppUser?> reloadUser();
+
+  /// Adds a password to a Google account so email + password works too.
+  Future<AppUser> setPassword(String password);
 
   /// Sends an OTP to the Indian mobile number [phone] (10 digits). Returns
   /// the user when Android verifies the number automatically.
@@ -39,7 +55,37 @@ abstract class AuthService {
 }
 
 class DemoAuthService implements AuthService {
-  const DemoAuthService();
+  DemoAuthService();
+
+  final _accounts = <String, String>{};
+
+  @override
+  Future<AppUser> signInWithEmail(String email, String password) async {
+    await Future<void>.delayed(_delay);
+    if (_accounts[email] != password) throw const AuthFailure('wrongEmailPassword');
+    return AppUser(uid: 'demo-$email', name: email.split('@').first, email: email, provider: 'password', hasPassword: true);
+  }
+
+  @override
+  Future<AppUser> registerWithEmail(String email, String password) async {
+    await Future<void>.delayed(_delay);
+    if (_accounts.containsKey(email)) throw const AuthFailure('emailInUse');
+    _accounts[email] = password;
+    return AppUser(uid: 'demo-$email', name: email.split('@').first, email: email, provider: 'password', hasPassword: true);
+  }
+
+  @override
+  Future<void> sendPasswordReset(String email) async {}
+
+  @override
+  Future<void> sendVerificationEmail() async {}
+
+  @override
+  Future<AppUser?> reloadUser() async => null;
+
+  @override
+  Future<AppUser> setPassword(String password) async =>
+      const AppUser(uid: 'demo-google', name: 'VoteWala User', email: 'user@gmail.com', provider: 'google', hasPassword: true);
 
   static const _delay = Duration(milliseconds: 300);
 
@@ -104,10 +150,28 @@ class UnavailableAuthService implements AuthService {
   Future<AppUser> verifyOtp(String phone, String code) async => _fail();
 
   @override
+  Future<AppUser> signInWithEmail(String email, String password) async => _fail();
+
+  @override
+  Future<AppUser> registerWithEmail(String email, String password) async => _fail();
+
+  @override
+  Future<void> sendPasswordReset(String email) async => _fail();
+
+  @override
+  Future<void> sendVerificationEmail() async => _fail();
+
+  @override
+  Future<AppUser?> reloadUser() async => null;
+
+  @override
+  Future<AppUser> setPassword(String password) async => _fail();
+
+  @override
   Future<void> signOut() async {}
 
   @override
   Future<String?> idToken() async => null;
 }
 
-AuthService authService = const DemoAuthService();
+AuthService authService = DemoAuthService();

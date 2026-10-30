@@ -33,7 +33,8 @@ before(async () => {
 after(() => env.cleanup());
 beforeEach(() => env.clearFirestore());
 
-const db = (uid) => env.authenticatedContext(uid).firestore();
+const db = (uid) => env.authenticatedContext(uid, { email_verified: true }).firestore();
+const unverified = (uid) => env.authenticatedContext(uid, { email_verified: false, firebase: { sign_in_provider: 'password' } }).firestore();
 
 /** What the app sends for a vote: ballot + tally + user counter (+ badges). */
 function voteBatch(fs, uid, pollId, bucket, option, { firstVote = true, badges = [] } = {}) {
@@ -96,6 +97,11 @@ describe('monthly constituency polls', () => {
 
   test('a vote for someone else is rejected', async () => {
     await assertFails(voteBatch(db('mallory'), 'alice', `mla-${M}`, 'mla-37', 0).commit());
+  });
+
+  test('unverified email accounts cannot vote', async () => {
+    await assertFails(voteBatch(unverified('ivy'), 'ivy', `mla-${M}`, 'mla-37', 0).commit());
+    await assertSucceeds(getDoc(doc(unverified('ivy'), `tallies/mla-${M}/buckets/mla-37`)));
   });
 
   test('signed-out users cannot vote', async () => {
