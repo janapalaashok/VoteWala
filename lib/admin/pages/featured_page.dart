@@ -15,7 +15,8 @@ class FeaturedPage extends StatelessWidget {
 
     return AdminPage(
       title: 'Featured polls',
-      subtitle: 'Statewide polls on the home page (Vote for CM, Vote for AP, recent activity). One vote per user per poll.',
+      subtitle: 'Statewide polls on the home page (Vote for CM, Vote for AP, recent activity). One vote per user per '
+          'poll. At most 5 are shown at a time.',
       actions: [
         FilledButton.icon(
           onPressed: () async {
@@ -47,6 +48,14 @@ class FeaturedPage extends StatelessWidget {
         ),
       ],
       children: [
+        if (polls.where((p) => p.enabled).length > admin.draft.civic.maxFeatured)
+          AdminCard(
+            child: Text(
+              'More than ${admin.draft.civic.maxFeatured} polls are visible. Only the first '
+              '${admin.draft.civic.maxFeatured} visible polls (in this order) are shown on the home page; switch the others off.',
+              style: const TextStyle(color: AdminColors.danger, fontWeight: FontWeight.w600),
+            ),
+          ),
         for (var i = 0; i < polls.length; i++)
           AdminCard(
             title: polls[i].titleEn,

@@ -9,7 +9,11 @@ import 'pages/branding_page.dart';
 import 'pages/candidates_page.dart';
 import 'pages/constituencies_page.dart';
 import 'pages/dashboard_page.dart';
+import 'pages/analytics_page.dart';
+import 'pages/civic_settings_page.dart';
 import 'pages/featured_page.dart';
+import 'pages/issues_page.dart';
+import 'pages/review_pages.dart';
 import 'pages/home_page.dart';
 import 'pages/parties_page.dart';
 import 'pages/publish_page.dart';
@@ -180,6 +184,11 @@ const _nav = [
   _NavItem(Icons.map_outlined, 'Constituencies', ConstituenciesPage()),
   _NavItem(Icons.how_to_vote_outlined, 'Featured polls', FeaturedPage()),
   _NavItem(Icons.web_outlined, 'Home & website', HomeContentPage()),
+  _NavItem(Icons.report_outlined, 'Local issues & alerts', IssuesPage()),
+  _NavItem(Icons.photo_library_outlined, 'Photo review', PhotosPage()),
+  _NavItem(Icons.gavel_outlined, 'Grievances', GrievancesPage()),
+  _NavItem(Icons.insights_outlined, 'Analytics', AnalyticsPage()),
+  _NavItem(Icons.tune_outlined, 'Issues, badges & sharing', CivicSettingsPage()),
   _NavItem(Icons.cloud_upload_outlined, 'Publish & backup', PublishPage()),
 ];
 

@@ -53,6 +53,9 @@ class FirebaseRest {
 
   bool get signedIn => _idToken != null;
 
+  /// The admin's ID token for other Firebase requests.
+  String? get idToken => _idToken;
+
   String get _docs =>
       'https://firestore.googleapis.com/v1/projects/${settings.projectId}/databases/(default)/documents';
 

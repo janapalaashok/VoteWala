@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../config/app_config.dart';
 import '../config/config_service.dart';
 import '../config/firebase_rest.dart';
+import 'admin_data.dart';
 import 'file_pick.dart';
 
 /// Admin session: sign-in, the working draft, uploads and publishing.
@@ -35,6 +36,9 @@ class AdminController extends ChangeNotifier {
 
   /// No Firebase project configured: publish only affects this browser.
   bool get demo => _rest == null;
+
+  /// Votes, issues, photos and grievances (null in demo mode).
+  late final AdminData? data = _rest == null ? null : AdminData(_rest, _service.settings);
 
   bool signedIn = false;
   String? email;

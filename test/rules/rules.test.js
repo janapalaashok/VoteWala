@@ -226,6 +226,14 @@ describe('local issues', () => {
 });
 
 describe('admin data', () => {
+  test('admins read vote counts but not ballots', async () => {
+    await voteBatch(db('alice'), 'alice', `mla-${M}`, 'mla-37', 0).commit();
+    await env.withSecurityRulesDisabled((ctx) => setDoc(doc(ctx.firestore(), 'admins/boss'), { role: 'admin' }));
+    await assertSucceeds(getDoc(doc(db('boss'), 'users/alice')));
+    await assertFails(getDoc(doc(db('bob'), 'users/alice')));
+    await assertFails(getDoc(doc(db('boss'), `votes/mla-${M}/ballots/alice`)));
+  });
+
   test('only admins change settings and grievances', async () => {
     await assertFails(setDoc(doc(db('alice'), 'settings/thresholds'), { default: 1 }));
     await assertFails(setDoc(doc(db('alice'), 'grievances/g1'), { status: 'resolved' }));

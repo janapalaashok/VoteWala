@@ -103,7 +103,8 @@ service cloud.firestore {
 
     // ---------------------------------------------------------------- users
     match /users/{uid} {
-      allow read: if signedIn() && request.auth.uid == uid;
+      // Admins see vote counts (badge statistics), never ballots' choices.
+      allow read: if (signedIn() && request.auth.uid == uid) || isAdmin();
       allow create: if signedIn() && request.auth.uid == uid && countsVote(uid, {});
       allow update: if signedIn() && request.auth.uid == uid
         && request.time > resource.data.lastActionAt + duration.value(2, 's')
