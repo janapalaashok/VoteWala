@@ -20,8 +20,9 @@ import '../theme.dart';
 import 'common.dart';
 
 /// Public website; links open the poll directly (see main.dart deep links).
-const siteUrl = 'https://votewala-a2dcd.web.app';
-const siteHost = 'votewala-a2dcd.web.app';
+/// Builds for another host pass --dart-define=SITE_URL=https://...
+const siteUrl = String.fromEnvironment('SITE_URL', defaultValue: 'https://votewala-a2dcd.web.app');
+final siteHost = Uri.parse(siteUrl).host;
 
 String constituencyLink(Constituency c) => '$siteUrl/#/c/${c.id}';
 String featuredLink(FeaturedPoll p) => '$siteUrl/#/f/${p.id}';
@@ -251,7 +252,7 @@ class ShareCard extends StatelessWidget {
                           style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 14)),
                     ),
                     const SizedBox(height: 7),
-                    const Text(siteHost, style: TextStyle(color: Colors.white, fontSize: 11.5, fontWeight: FontWeight.w700)),
+                    Text(siteHost, style: const TextStyle(color: Colors.white, fontSize: 11.5, fontWeight: FontWeight.w700)),
                     Text(context.tr('shareVerified'), style: const TextStyle(color: Color(0xFF9FB2C8), fontSize: 9.5)),
                   ]),
                 ),

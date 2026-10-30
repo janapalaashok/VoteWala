@@ -32,7 +32,7 @@ class PageBody extends StatelessWidget {
 /// apps identify themselves. Browsers send their own and forbid overriding it.
 const Map<String, String>? imageHeaders = kIsWeb
     ? null
-    : {'User-Agent': 'VoteWala/1.0 (https://votewala-a2dcd.web.app)'};
+    : {'User-Agent': 'VoteWala/1.0 ($siteUrl)'};
 
 class VoteWalaLogo extends StatelessWidget {
   const VoteWalaLogo({super.key, this.markSize = 56, this.horizontal = false, this.tagline = true});

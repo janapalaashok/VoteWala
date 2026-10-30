@@ -33,6 +33,19 @@ jobs:
       - working-directory: test/rules
         run: npm run test:app
 
+  # The Cloud Run container's nginx config must be valid.
+  hosting:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          mkdir -p build/web && echo '<html>ok</html>' > build/web/index.html
+          docker build -f hosting/Dockerfile -t votewala-web .
+          docker run -d -p 8080:8080 --name web votewala-web
+          sleep 2
+          curl -fsS http://localhost:8080/ | grep ok
+          curl -fsSI http://localhost:8080/ | grep -i 'cache-control: no-cache'
+
   android-apk:
     runs-on: ubuntu-latest
     steps:

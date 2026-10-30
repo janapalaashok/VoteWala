@@ -26,7 +26,8 @@ API, Storage, budget alert, and the **Firebase Rules Admin** role for the servic
 3. **Settings documents (optional)**: admin panel → *Issues, badges & sharing* → set
    thresholds → **Save thresholds & milestones**. Without them, rules use the defaults
    (threshold 100, badges 1/5/10/25/50/100).
-4. **Deploy website** workflow.
+4. **Deploy website (Cloud Run)** workflow (see `docs/GCP_HOSTING.md`), or the Firebase
+   Hosting **Deploy website** workflow.
 5. **Build** workflow (Run workflow) to replace the testers' APK
    (`releases/download/test-build/VoteWala.apk`).
 6. Smoke test: sign in with OTP on the website and the APK, vote once in an MLA poll, try a
