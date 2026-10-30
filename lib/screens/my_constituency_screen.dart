@@ -304,7 +304,8 @@ class _CategoryRow extends StatelessWidget {
           selectedColor: color,
           labelStyle: TextStyle(color: selected ? Colors.white : color, fontWeight: FontWeight.w700),
           side: BorderSide(color: color.withValues(alpha: 0.5)),
-          onSelected: onChoice == null ? null : (_) => onChoice!(value),
+          // After submitting the answer stays shown (not greyed out) but fixed.
+          onSelected: (_) => onChoice?.call(value),
         ),
       );
     }

@@ -15,6 +15,9 @@ import 'state/app_state.dart';
 import 'state/deep_link.dart';
 import 'theme.dart';
 
+/// flutter build web --dart-define=VOTEWALA_DEMO=true: offline UI review.
+const _demo = bool.fromEnvironment('VOTEWALA_DEMO');
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final prefs = await SharedPreferences.getInstance();
@@ -26,16 +29,23 @@ Future<void> main() async {
     return;
   }
   final settings = ConfigService.instance.settings;
-  try {
-    authService = await FirebaseAuthService.init(settings);
-  } catch (e) {
-    debugPrint('Firebase unavailable: $e');
-    authService = const UnavailableAuthService();
+  final VoteService votes;
+  if (_demo) {
+    // UI review build: simulated sign-in, votes kept in memory only.
+    authService = const DemoAuthService();
+    votes = VoteService(MemoryStore(), MemoryPhotoStore(), minGap: Duration.zero);
+  } else {
+    try {
+      authService = await FirebaseAuthService.init(settings);
+    } catch (e) {
+      debugPrint('Firebase unavailable: $e');
+      authService = const UnavailableAuthService();
+    }
+    votes = VoteService(
+      FirestoreClient(settings, idToken: authService.idToken),
+      FirebasePhotoStore(settings, authService.idToken),
+    );
   }
-  final votes = VoteService(
-    FirestoreClient(settings, idToken: authService.idToken),
-    FirebasePhotoStore(settings, authService.idToken),
-  );
   final state = AppState(prefs, auth: authService, votes: votes);
   await state.restoreSession();
   runApp(VoteWalaApp(state: state));

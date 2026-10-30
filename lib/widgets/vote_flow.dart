@@ -80,7 +80,7 @@ class _BadgeDialog extends StatelessWidget {
             Text(badge.label(te),
                 textAlign: TextAlign.center, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800)),
             const SizedBox(height: 8),
-            Text(context.tr('badgeMilestone', {'n': '${badge.milestone}'}),
+            Text(context.tr(badge.milestone == 1 ? 'badgeMilestoneOne' : 'badgeMilestone', {'n': '${badge.milestone}'}),
                 textAlign: TextAlign.center, style: const TextStyle(color: AppColors.muted)),
             const SizedBox(height: 12),
             TextButton(onPressed: () => Navigator.of(context).pop(), child: Text(context.tr('great'))),

@@ -102,7 +102,7 @@ class AchievementsScreen extends StatelessWidget {
                       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                         Text(b.label(te), style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15.5)),
                         const SizedBox(height: 2),
-                        Text(context.tr('badgeMilestone', {'n': '${b.milestone}'}),
+                        Text(context.tr(b.milestone == 1 ? 'badgeMilestoneOne' : 'badgeMilestone', {'n': '${b.milestone}'}),
                             style: const TextStyle(color: AppColors.muted, fontSize: 12.5)),
                         if (!state.earnedBadges.contains(b.id)) ...[
                           const SizedBox(height: 8),
