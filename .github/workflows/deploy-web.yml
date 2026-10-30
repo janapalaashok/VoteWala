@@ -3,9 +3,8 @@ name: Deploy website
 # Builds the Flutter website and publishes it to Firebase Hosting
 # (https://votewala-a2dcd.web.app). Needs the FIREBASE_SERVICE_ACCOUNT secret
 # (see docs/FIREBASE_SETUP.md); skipped until it exists.
+# Manual only: run it from the Actions tab once a release is approved.
 on:
-  push:
-    branches: [main, master, 'claude/**']
   workflow_dispatch:
 
 jobs:
