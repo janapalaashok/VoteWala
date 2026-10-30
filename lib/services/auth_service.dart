@@ -18,6 +18,9 @@ abstract class AuthService {
   /// Whether "Continue with Google" is offered on this platform.
   bool get supportsGoogle;
 
+  /// Whether mobile OTP sign-in is offered.
+  bool get supportsPhone;
+
   /// The signed-in voter restored from the previous session, if any.
   Future<AppUser?> restore();
 
@@ -42,6 +45,9 @@ class DemoAuthService implements AuthService {
 
   @override
   bool get supportsGoogle => true;
+
+  @override
+  bool get supportsPhone => true;
 
   @override
   Future<AppUser?> restore() async => null;
@@ -80,7 +86,10 @@ class UnavailableAuthService implements AuthService {
   static Never _fail() => throw const AuthFailure('networkError');
 
   @override
-  bool get supportsGoogle => false;
+  bool get supportsGoogle => true;
+
+  @override
+  bool get supportsPhone => false;
 
   @override
   Future<AppUser?> restore() async => null;

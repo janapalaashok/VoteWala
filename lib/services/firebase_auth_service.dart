@@ -27,7 +27,9 @@ FirebaseOptions firebaseOptions(FirebaseSettings s) => kIsWeb
         storageBucket: s.storageBucket,
       );
 
-/// Phone OTP (all platforms) and Google (website) sign-in with Firebase Auth.
+/// Google sign-in (website and apps) with Firebase Auth. The first sign-in
+/// creates the account, later ones log in. Mobile OTP is built in but off
+/// until --dart-define=PHONE_LOGIN=true (needs Blaze and Phone sign-in on).
 class FirebaseAuthService implements AuthService {
   FirebaseAuthService._();
 
@@ -44,7 +46,10 @@ class FirebaseAuthService implements AuthService {
   int? _resendToken;
 
   @override
-  bool get supportsGoogle => kIsWeb;
+  bool get supportsGoogle => true;
+
+  @override
+  bool get supportsPhone => const bool.fromEnvironment('PHONE_LOGIN');
 
   static AppUser _toUser(User u) => AppUser(
         uid: u.uid,
@@ -63,7 +68,9 @@ class FirebaseAuthService implements AuthService {
 
   @override
   Future<AppUser> signInWithGoogle() => _guard(() async {
-        final cred = await _auth.signInWithPopup(GoogleAuthProvider());
+        final provider = GoogleAuthProvider()..setCustomParameters({'prompt': 'select_account'});
+        // Web: popup. Android/iOS: the system browser's Google sign-in page.
+        final cred = kIsWeb ? await _auth.signInWithPopup(provider) : await _auth.signInWithProvider(provider);
         return _toUser(cred.user!);
       });
 

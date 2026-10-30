@@ -97,52 +97,69 @@ class _LoginScreenState extends State<LoginScreen> {
                 Text(context.tr('signInSub'),
                     textAlign: TextAlign.center, style: const TextStyle(color: AppColors.muted, height: 1.4)),
                 const SizedBox(height: 32),
-                if (authService.supportsGoogle) ...[
-                  OutlinedButton(
+                if (authService.supportsGoogle)
+                  FilledButton(
                     onPressed: _busy ? null : _google,
-                    child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                      const _GoogleG(),
-                      const SizedBox(width: 12),
-                      Text(context.tr('continueGoogle'), style: const TextStyle(color: AppColors.blue)),
-                    ]),
-                  ),
-                  const SizedBox(height: 20),
-                  Row(children: [
-                    const Expanded(child: Divider()),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      child: Text(context.tr('or'), style: const TextStyle(color: AppColors.muted)),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      foregroundColor: AppColors.ink,
+                      minimumSize: const Size.fromHeight(54),
+                      side: const BorderSide(color: AppColors.border),
                     ),
-                    const Expanded(child: Divider()),
-                  ]),
-                  const SizedBox(height: 20),
+                    child: _busy
+                        ? const SizedBox.square(dimension: 22, child: CircularProgressIndicator(strokeWidth: 2.4))
+                        : Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                            const _GoogleG(),
+                            const SizedBox(width: 12),
+                            Text(context.tr('continueGoogle'),
+                                style: const TextStyle(color: AppColors.ink, fontWeight: FontWeight.w700, fontSize: 16)),
+                          ]),
+                  ),
+                if (authService.supportsGoogle && !authService.supportsPhone) ...[
+                  const SizedBox(height: 12),
+                  Text(context.tr('googleOnlyHint'),
+                      textAlign: TextAlign.center, style: const TextStyle(color: AppColors.muted, fontSize: 12.5)),
                 ],
-                TextField(
-                  controller: _phone,
-                  keyboardType: TextInputType.phone,
-                  inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(10)],
-                  onSubmitted: (_) => _sendOtp(),
-                  decoration: InputDecoration(
-                    hintText: context.tr('mobileNumber'),
-                    errorText: _error,
-                    prefixIcon: Container(
-                      width: 64,
-                      margin: const EdgeInsets.only(right: 10),
-                      alignment: Alignment.center,
-                      decoration: const BoxDecoration(border: Border(right: BorderSide(color: AppColors.border))),
-                      child: const Text('+91', style: TextStyle(fontWeight: FontWeight.w600)),
+                if (authService.supportsPhone) ...[
+                  if (authService.supportsGoogle) ...[
+                    const SizedBox(height: 20),
+                    Row(children: [
+                      const Expanded(child: Divider()),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        child: Text(context.tr('or'), style: const TextStyle(color: AppColors.muted)),
+                      ),
+                      const Expanded(child: Divider()),
+                    ]),
+                    const SizedBox(height: 20),
+                  ],
+                  TextField(
+                    controller: _phone,
+                    keyboardType: TextInputType.phone,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(10)],
+                    onSubmitted: (_) => _sendOtp(),
+                    decoration: InputDecoration(
+                      hintText: context.tr('mobileNumber'),
+                      errorText: _error,
+                      prefixIcon: Container(
+                        width: 64,
+                        margin: const EdgeInsets.only(right: 10),
+                        alignment: Alignment.center,
+                        decoration: const BoxDecoration(border: Border(right: BorderSide(color: AppColors.border))),
+                        child: const Text('+91', style: TextStyle(fontWeight: FontWeight.w600)),
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 20),
-                FilledButton(
-                  onPressed: _busy ? null : _sendOtp,
-                  style: FilledButton.styleFrom(backgroundColor: AppColors.green),
-                  child: _busy
-                      ? const SizedBox.square(
-                          dimension: 22, child: CircularProgressIndicator(strokeWidth: 2.4, color: Colors.white))
-                      : Text(context.tr('sendOtp')),
-                ),
+                  const SizedBox(height: 20),
+                  FilledButton(
+                    onPressed: _busy ? null : _sendOtp,
+                    style: FilledButton.styleFrom(backgroundColor: AppColors.green),
+                    child: _busy
+                        ? const SizedBox.square(
+                            dimension: 22, child: CircularProgressIndicator(strokeWidth: 2.4, color: Colors.white))
+                        : Text(context.tr('sendOtp')),
+                  ),
+                ],
                 const SizedBox(height: 28),
                 Text(context.tr('agree'),
                     textAlign: TextAlign.center, style: const TextStyle(color: AppColors.muted, fontSize: 12.5)),
