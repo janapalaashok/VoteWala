@@ -4,6 +4,8 @@ name: Firebase app IDs
 # fingerprints (needed for phone OTP). Deploys nothing.
 on:
   workflow_dispatch:
+  push:
+    paths: [tools/firebase_apps.py, .github/workflows/firebase-apps.yml]
 
 jobs:
   apps:
