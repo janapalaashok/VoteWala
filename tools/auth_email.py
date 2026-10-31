@@ -1,6 +1,6 @@
 """Configure the sign-in emails (verification, password reset, email change).
 
-- Sender name "VoteWala", replies go to contact@votewala.in.
+- Sender name and reply-to: Firebase console only (see below).
 - Links in the emails open https://votewala.in/__/auth/action.
 - If SMTP_PASSWORD is set (GitHub secret), the emails are sent through the
   contact@votewala.in mailbox itself (GoDaddy SMTP), so they come FROM
@@ -36,9 +36,9 @@ CONFIG = f"https://identitytoolkit.googleapis.com/admin/v2/projects/{PROJECT}/co
 TEMPLATES = ("verifyEmailTemplate", "resetPasswordTemplate", "changeEmailTemplate")
 body = {"notification": {"sendEmail": {"callbackUri": f"{SITE}/__/auth/action"}}}
 mask = ["notification.sendEmail.callbackUri"]
-for t in TEMPLATES:
-    body["notification"]["sendEmail"][t] = {"senderDisplayName": NAME, "replyTo": SENDER}
-    mask += [f"notification.sendEmail.{t}.senderDisplayName", f"notification.sendEmail.{t}.replyTo"]
+# Google does not allow the template text (sender name, reply-to) to be
+# changed through the API (EMAIL_TEMPLATE_UPDATE_NOT_ALLOWED); set those in the
+# Firebase console: Authentication -> Templates.
 
 password = os.environ.get("SMTP_PASSWORD", "")
 if password:
@@ -54,7 +54,7 @@ if password:
     mask += ["notification.sendEmail.method", "notification.sendEmail.smtp"]
 else:
     print("SMTP_PASSWORD not set: emails keep Google's sender address (noreply@...firebaseapp.com),"
-          f" with sender name {NAME} and replies to {SENDER}.")
+          f" Set the sender name and reply-to in Firebase -> Authentication -> Templates.")
 
 r = s.patch(CONFIG, params={"updateMask": ",".join(mask)}, json=body)
 if r.status_code != 200:
