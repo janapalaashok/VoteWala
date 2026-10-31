@@ -81,7 +81,7 @@ class AchievementsScreen extends StatelessWidget {
     final state = AppScope.of(context);
     final te = context.isTelugu;
     return Scaffold(
-      appBar: AppBar(title: Text(context.tr('achievements'))),
+      appBar: PageBar(title: Text(context.tr('achievements'))),
       body: ListView(padding: const EdgeInsets.all(16), children: [
         PageBody(
           maxWidth: 640,

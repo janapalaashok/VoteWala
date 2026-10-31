@@ -42,7 +42,7 @@ class _ConstituencyListScreenState extends State<ConstituencyListScreen> {
         );
 
     return Scaffold(
-      appBar: AppBar(
+      appBar: PageBar(
         leading: shellBackButton(context, embedded: widget.embedded),
         title: Text(context.tr(widget.type == ElectionType.mla ? 'mlaConstituencies' : 'mpConstituencies')),
         actions: [

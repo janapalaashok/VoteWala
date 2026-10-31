@@ -18,7 +18,7 @@ class InfoScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Scaffold(
         backgroundColor: Colors.white,
-        appBar: AppBar(backgroundColor: Colors.white, title: Text(context.tr(titleKey))),
+        appBar: PageBar(backgroundColor: Colors.white, title: Text(context.tr(titleKey))),
         body: ListView(padding: const EdgeInsets.all(20), children: [
           PageBody(
             maxWidth: 640,
@@ -52,7 +52,7 @@ class NotificationSettingsScreen extends StatelessWidget {
         );
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(backgroundColor: Colors.white, title: Text(context.tr('notificationSettings'))),
+      appBar: PageBar(backgroundColor: Colors.white, title: Text(context.tr('notificationSettings'))),
       body: PageBody(
         maxWidth: 640,
         child: ListView(children: [
@@ -73,7 +73,7 @@ class MyParticipationScreen extends StatelessWidget {
     final history = AppScope.of(context).voteHistory;
     final te = context.isTelugu;
     return Scaffold(
-      appBar: AppBar(title: Text(context.tr('myParticipation'))),
+      appBar: PageBar(title: Text(context.tr('myParticipation'))),
       body: history.isEmpty
           ? EmptyState(icon: Icons.how_to_vote_outlined, message: context.tr('noVotesYet'))
           : PageBody(
@@ -115,7 +115,7 @@ class SavedCandidatesScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final saved = AppScope.of(context).savedCandidates.map(Candidate.byId).toList();
     return Scaffold(
-      appBar: AppBar(title: Text(context.tr('savedCandidates'))),
+      appBar: PageBar(title: Text(context.tr('savedCandidates'))),
       body: saved.isEmpty
           ? EmptyState(icon: Icons.bookmark_border, message: context.tr('noSaved'))
           : PageBody(

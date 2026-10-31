@@ -81,7 +81,7 @@ class _ApMapScreenState extends State<ApMapScreen> {
     final selected = _selected == null ? null : summaries[_selected]!;
 
     return Scaffold(
-      appBar: AppBar(title: Text(context.tr('apMap'))),
+      appBar: PageBar(title: Text(context.tr('apMap'))),
       body: ListView(padding: const EdgeInsets.fromLTRB(16, 4, 16, 24), children: [
         PageBody(
           maxWidth: 820,

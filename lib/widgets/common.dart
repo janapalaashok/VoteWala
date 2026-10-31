@@ -12,7 +12,11 @@ import 'share_card.dart';
 
 bool isWide(BuildContext context) => MediaQuery.sizeOf(context).width >= 900;
 
-/// Centers content and caps its width on tablets and desktop browsers.
+/// Desktop website layout (wide browser window).
+bool desktopLayout(BuildContext context) => kIsWeb && isWide(context);
+
+/// Centers content and caps its width; on the desktop website pages get
+/// about a third more room.
 class PageBody extends StatelessWidget {
   const PageBody({super.key, required this.child, this.maxWidth = 760});
 
@@ -20,10 +24,114 @@ class PageBody extends StatelessWidget {
   final double maxWidth;
 
   @override
-  Widget build(BuildContext context) => Align(
-        alignment: Alignment.topCenter,
-        child: ConstrainedBox(constraints: BoxConstraints(maxWidth: maxWidth), child: child),
+  Widget build(BuildContext context) {
+    final width = desktopLayout(context) ? (maxWidth * 1.35).clamp(maxWidth, 1240.0) : maxWidth;
+    return Align(
+      alignment: Alignment.topCenter,
+      child: ConstrainedBox(constraints: BoxConstraints(maxWidth: width), child: child),
+    );
+  }
+}
+
+/// App bar for inner pages: the usual app bar on phones; on the desktop
+/// website a full-width bar with back, logo and page title.
+class PageBar extends StatelessWidget implements PreferredSizeWidget {
+  const PageBar({
+    super.key,
+    this.title,
+    this.actions,
+    this.leading,
+    this.backgroundColor,
+    this.centerTitle,
+    this.titleSpacing,
+    this.automaticallyImplyLeading = true,
+  });
+
+  final Widget? title;
+  final double? titleSpacing;
+  final bool automaticallyImplyLeading;
+  final List<Widget>? actions;
+  final Widget? leading;
+  final Color? backgroundColor;
+  final bool? centerTitle;
+
+  static bool get _wideWeb {
+    if (!kIsWeb) return false;
+    final view = WidgetsBinding.instance.platformDispatcher.views.first;
+    return view.physicalSize.width / view.devicePixelRatio >= 900;
+  }
+
+  @override
+  Size get preferredSize => Size.fromHeight(_wideWeb ? 76 : kToolbarHeight);
+
+  @override
+  Widget build(BuildContext context) {
+    if (!desktopLayout(context)) {
+      return AppBar(
+        title: title,
+        actions: actions,
+        leading: leading,
+        backgroundColor: backgroundColor,
+        centerTitle: centerTitle,
+        titleSpacing: titleSpacing,
+        automaticallyImplyLeading: automaticallyImplyLeading,
       );
+    }
+    final canPop = automaticallyImplyLeading && Navigator.of(context).canPop();
+    return Material(
+      color: Colors.white,
+      child: Container(
+        height: 76,
+        decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: AppColors.border))),
+        padding: const EdgeInsets.symmetric(horizontal: 32),
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 1240),
+            child: Row(children: [
+              if (leading != null)
+                leading!
+              else if (canPop)
+                IconButton(
+                  tooltip: MaterialLocalizations.of(context).backButtonTooltip,
+                  onPressed: () => Navigator.of(context).maybePop(),
+                  icon: const Icon(Icons.arrow_back),
+                ),
+              const SizedBox(width: 8),
+              InkWell(
+                onTap: () => Navigator.of(context).popUntil((r) => r.isFirst),
+                child: const VoteWalaLogo(markSize: 34, horizontal: true),
+              ),
+              if (title != null) ...[
+                Container(width: 1, height: 28, margin: const EdgeInsets.symmetric(horizontal: 20), color: AppColors.border),
+                Expanded(
+                  child: DefaultTextStyle.merge(
+                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: AppColors.ink),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    child: title!,
+                  ),
+                ),
+              ] else
+                const Spacer(),
+              // The app theme stretches buttons to full width; not in this row.
+              if (actions != null)
+                Theme(
+                  data: Theme.of(context).copyWith(
+                    outlinedButtonTheme: OutlinedButtonThemeData(
+                      style: OutlinedButton.styleFrom(minimumSize: const Size(0, 44)),
+                    ),
+                    filledButtonTheme: FilledButtonThemeData(
+                      style: FilledButton.styleFrom(minimumSize: const Size(0, 44)),
+                    ),
+                  ),
+                  child: Row(mainAxisSize: MainAxisSize.min, children: actions!),
+                ),
+            ]),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 /// The VoteWala logo: uploaded images from the admin config, otherwise the

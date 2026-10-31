@@ -42,7 +42,7 @@ class _PrioritiesDashboardScreenState extends State<PrioritiesDashboardScreen> {
     final grievances = state.grievances;
 
     return Scaffold(
-      appBar: AppBar(title: Text(context.tr('publicPriorities'))),
+      appBar: PageBar(title: Text(context.tr('publicPriorities'))),
       body: ListView(padding: const EdgeInsets.fromLTRB(16, 8, 16, 32), children: [
         PageBody(
           maxWidth: 820,

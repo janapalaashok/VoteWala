@@ -89,7 +89,7 @@ class _ResultsScreenState extends State<ResultsScreen> {
     final total = ApData.of(_type).length;
 
     return Scaffold(
-      appBar: AppBar(
+      appBar: PageBar(
         leading: shellBackButton(context, embedded: widget.embedded),
         title: Text(context.tr('results')),
       ),

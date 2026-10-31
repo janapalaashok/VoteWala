@@ -33,7 +33,7 @@ class CandidateDetailScreen extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(
+      appBar: PageBar(
         backgroundColor: Colors.white,
         centerTitle: true,
         title: Text(context.tr('candidateDetails')),

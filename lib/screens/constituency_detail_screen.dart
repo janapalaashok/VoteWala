@@ -26,12 +26,13 @@ class ConstituencyDetailScreen extends StatelessWidget {
     final c = constituency;
     final te = context.isTelugu;
     final snapshot = AppScope.of(context).snapshot(c);
+    if (desktopLayout(context)) return _DesktopDetail(constituency: c);
     return DefaultTabController(
       length: 4,
       initialIndex: initialTab,
       child: Scaffold(
         backgroundColor: Colors.white,
-        appBar: AppBar(
+        appBar: PageBar(
           backgroundColor: Colors.white,
           actions: [IconButton(icon: const Icon(Icons.share_outlined), onPressed: () => sharePoll(context, c))],
         ),
@@ -132,7 +133,11 @@ class _PollTabState extends State<_PollTab> {
     final locked = voted != null || usedElsewhere != null || state.user == null;
     final typeLabel = context.tr(c.isMla ? 'assemblyConstituency' : 'parliamentConstituency');
 
-    return ListView(padding: const EdgeInsets.all(16), children: [
+    return ListView(
+        shrinkWrap: _inline(context),
+        physics: _inline(context) ? const NeverScrollableScrollPhysics() : null,
+        padding: const EdgeInsets.all(16),
+        children: [
       Row(children: [
         const LiveBadge(long: true),
         const Spacer(),
@@ -316,7 +321,11 @@ class _CandidatesTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final candidates = PollRepository.candidates(constituency).where((c) => c.isPerson).toList();
-    return ListView(padding: const EdgeInsets.all(16), children: [
+    return ListView(
+        shrinkWrap: _inline(context),
+        physics: _inline(context) ? const NeverScrollableScrollPhysics() : null,
+        padding: const EdgeInsets.all(16),
+        children: [
       for (final c in candidates)
         Padding(padding: const EdgeInsets.only(bottom: 10), child: CandidateListCard(candidate: c)),
       const SizedBox(height: 4),
@@ -371,7 +380,11 @@ class _ResultsTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final snapshot = AppScope.of(context).snapshot(constituency);
-    return ListView(padding: const EdgeInsets.all(16), children: [
+    return ListView(
+        shrinkWrap: _inline(context),
+        physics: _inline(context) ? const NeverScrollableScrollPhysics() : null,
+        padding: const EdgeInsets.all(16),
+        children: [
       Row(children: [
         LiveBadge(closed: snapshot.closed),
         const Spacer(),
@@ -414,7 +427,11 @@ class _AboutTab extends StatelessWidget {
           trailing: onTap == null ? null : const Icon(Icons.chevron_right),
           onTap: onTap,
         );
-    return ListView(padding: const EdgeInsets.symmetric(vertical: 8), children: [
+    return ListView(
+        shrinkWrap: _inline(context),
+        physics: _inline(context) ? const NeverScrollableScrollPhysics() : null,
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        children: [
       Padding(
         padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
         child: AppCard(
@@ -465,5 +482,118 @@ class _AboutTab extends StatelessWidget {
         child: Text(context.tr('dataCredit'), style: const TextStyle(color: AppColors.muted, fontSize: 11.5)),
       ),
     ]);
+  }
+}
+
+/// Whether a tab is laid out inside the desktop two-column page.
+bool _inline(BuildContext context) => context.findAncestorWidgetOfExactType<_InlineTabs>() != null;
+
+class _InlineTabs extends StatelessWidget {
+  const _InlineTabs({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => child;
+}
+
+BoxDecoration _panel() => BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(20),
+      border: Border.all(color: AppColors.border),
+      boxShadow: const [BoxShadow(color: Color(0x0D0F172A), blurRadius: 28, offset: Offset(0, 12))],
+    );
+
+/// Desktop website: header, then the poll on the left and results,
+/// candidates and constituency facts on the right.
+class _DesktopDetail extends StatelessWidget {
+  const _DesktopDetail({required this.constituency});
+
+  final Constituency constituency;
+
+  Widget _panelWith(String title, Widget child) => Container(
+        margin: const EdgeInsets.only(bottom: 20),
+        decoration: _panel(),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 18, 20, 0),
+            child: Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+          ),
+          child,
+        ]),
+      );
+
+  @override
+  Widget build(BuildContext context) {
+    final c = constituency;
+    final te = context.isTelugu;
+    final snapshot = AppScope.of(context).snapshot(c);
+    final district = ApData.districts.firstWhere((d) => d.id == c.districtIds.first);
+    return Scaffold(
+      backgroundColor: AppColors.bg,
+      appBar: PageBar(
+        title: Text(c.name(te)),
+        actions: [
+          OutlinedButton.icon(
+            onPressed: () => sharePoll(context, c),
+            icon: const Icon(Icons.share_outlined),
+            label: Text(context.tr('share')),
+          ),
+        ],
+      ),
+      body: _InlineTabs(
+        child: ListView(padding: const EdgeInsets.fromLTRB(32, 28, 32, 56), children: [
+          Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 1240),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                Container(
+                  padding: const EdgeInsets.all(28),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(24),
+                    gradient: const LinearGradient(colors: [Color(0xFF0B1B33), Color(0xFF16406B)]),
+                  ),
+                  child: Row(children: [
+                    Expanded(
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Text(context.tr(c.isMla ? 'assemblyConstituency' : 'parliamentConstituency').toUpperCase(),
+                            style: const TextStyle(color: Color(0xFFFFB27A), fontWeight: FontWeight.w800, letterSpacing: 1)),
+                        const SizedBox(height: 6),
+                        Text(c.name(te),
+                            style: const TextStyle(color: Colors.white, fontSize: 36, fontWeight: FontWeight.w900, letterSpacing: -0.5)),
+                        Text('${c.name(!te)} · #${c.no} · ${district.name(te)}',
+                            style: const TextStyle(color: Color(0xFFB9C7DA), fontSize: 15)),
+                      ]),
+                    ),
+                    Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+                      LiveBadge(closed: snapshot.closed),
+                      const SizedBox(height: 10),
+                      Text(snapshot.hasVotes ? votesText(context, snapshot.total) : context.tr('beFirst'),
+                          style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w700)),
+                    ]),
+                  ]),
+                ),
+                const SizedBox(height: 24),
+                Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Expanded(
+                    flex: 5,
+                    child: _panelWith(context.tr('poll'), _PollTab(constituency: c)),
+                  ),
+                  const SizedBox(width: 24),
+                  Expanded(
+                    flex: 4,
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                      _panelWith(context.tr('results'), _ResultsTab(constituency: c)),
+                      _panelWith(context.tr('candidates'), _CandidatesTab(constituency: c)),
+                      _panelWith(context.tr('about'), _AboutTab(constituency: c)),
+                    ]),
+                  ),
+                ]),
+              ]),
+            ),
+          ),
+        ]),
+      ),
+    );
   }
 }

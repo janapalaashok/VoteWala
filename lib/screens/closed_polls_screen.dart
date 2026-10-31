@@ -22,7 +22,7 @@ class ClosedPollsScreen extends StatelessWidget {
     final te = context.isTelugu;
     final previous = PollMonth.current().previous;
     return Scaffold(
-      appBar: AppBar(title: Text(context.tr('closedPolls'))),
+      appBar: PageBar(title: Text(context.tr('closedPolls'))),
       body: ListView(padding: const EdgeInsets.fromLTRB(16, 8, 16, 32), children: [
         PageBody(
           maxWidth: 1200,

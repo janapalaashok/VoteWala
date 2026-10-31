@@ -40,7 +40,7 @@ class _SearchScreenState extends State<SearchScreen> {
           ];
 
     return Scaffold(
-      appBar: AppBar(
+      appBar: PageBar(
         titleSpacing: 0,
         title: Padding(
           padding: const EdgeInsets.only(right: 16),
@@ -101,7 +101,7 @@ class _LivePollsScreenState extends State<LivePollsScreen> {
     final state = AppScope.of(context);
     final polls = state.snapshots(_type)..sort((a, b) => b.total.compareTo(a.total));
     return Scaffold(
-      appBar: AppBar(title: Text(context.tr('livePolls'))),
+      appBar: PageBar(title: Text(context.tr('livePolls'))),
       body: PageBody(
         child: Column(children: [
           Padding(
@@ -148,7 +148,7 @@ class _CandidatesDirectoryScreenState extends State<CandidatesDirectoryScreen> {
             if (cand.isPerson && (_partyId == null || cand.party.group == _partyId)) cand,
     ];
     return Scaffold(
-      appBar: AppBar(title: Text(context.tr('candidates'))),
+      appBar: PageBar(title: Text(context.tr('candidates'))),
       body: PageBody(
         child: Column(children: [
           Padding(

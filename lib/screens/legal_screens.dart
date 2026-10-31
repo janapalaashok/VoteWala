@@ -32,7 +32,7 @@ class LegalScreen extends StatelessWidget {
     final te = context.isTelugu;
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(
+      appBar: PageBar(
         backgroundColor: Colors.white,
         automaticallyImplyLeading: !standalone,
         title: Text(doc.title(te)),
@@ -41,7 +41,7 @@ class LegalScreen extends StatelessWidget {
         PageBody(
           maxWidth: 760,
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            if (standalone) ...[
+            if (standalone && !desktopLayout(context)) ...[
               const VoteWalaLogo(markSize: 40, horizontal: true),
               const SizedBox(height: 20),
             ],
@@ -109,7 +109,7 @@ class LegalIndexScreen extends StatelessWidget {
     final te = context.isTelugu;
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(backgroundColor: Colors.white, title: Text(context.tr('legalPolicies'))),
+      appBar: PageBar(backgroundColor: Colors.white, title: Text(context.tr('legalPolicies'))),
       body: ListView(children: [
         PageBody(
           maxWidth: 640,

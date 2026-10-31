@@ -68,7 +68,7 @@ class MyConstituencyScreen extends StatelessWidget {
     // Feedback stays with the constituency it was given for this month.
     final c = ApData.byIdOrNull(state.myIssueConstituency ?? '') ?? state.homeConstituency;
     return Scaffold(
-      appBar: AppBar(
+      appBar: PageBar(
         title: Text(context.tr('yourConstituency')),
         actions: [
           IconButton(

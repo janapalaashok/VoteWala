@@ -50,7 +50,7 @@ class _LiveResultsScreenState extends State<LiveResultsScreen> {
     final snapshot = AppScope.of(context).snapshot(c);
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(
+      appBar: PageBar(
         backgroundColor: Colors.white,
         centerTitle: true,
         title: Text(context.tr('liveResults')),

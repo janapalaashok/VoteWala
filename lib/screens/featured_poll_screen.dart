@@ -201,7 +201,7 @@ class _FeaturedPollScreenState extends State<FeaturedPollScreen> {
 
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(
+      appBar: PageBar(
         backgroundColor: Colors.white,
         title: Text(poll.title(te)),
         actions: [IconButton(icon: const Icon(Icons.share_outlined), onPressed: _share)],
@@ -361,7 +361,7 @@ class _MonthRow extends StatelessWidget {
             StatusBadge(label: context.tr('live')),
           ],
           const Spacer(),
-          Text('${formatCompact(total)} ${context.tr('votes')}',
+          Text(votesText(context, total),
               style: const TextStyle(color: AppColors.muted, fontSize: 12)),
         ]),
         const SizedBox(height: 6),
@@ -369,15 +369,19 @@ class _MonthRow extends StatelessWidget {
           borderRadius: BorderRadius.circular(4),
           child: SizedBox(
             height: 10,
-            child: Row(children: [
-              for (final i in order)
-                Expanded(flex: votes[i].clamp(1, 1 << 30), child: Container(color: optionColor(poll, i))),
-            ]),
+            child: total == 0
+                ? const ColoredBox(color: AppColors.border)
+                : Row(children: [
+                    for (final i in order)
+                      Expanded(flex: votes[i].clamp(1, 1 << 30), child: Container(color: optionColor(poll, i))),
+                  ]),
           ),
         ),
         const SizedBox(height: 4),
         Text(
-          order.take(3).map((i) => '${poll.options[i].label(te)} ${_pct(votes[i], total)}%').join(' · '),
+          total == 0
+              ? context.tr('beFirst')
+              : order.take(3).map((i) => '${poll.options[i].label(te)} ${_pct(votes[i], total)}%').join(' · '),
           style: const TextStyle(fontSize: 12, color: AppColors.muted),
         ),
       ]),
