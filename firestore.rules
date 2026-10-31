@@ -1,0 +1,359 @@
+rules_version = '2';
+
+// VoteWala data rules. There is no server code: every count, badge and alert
+// is written by the voter's own client in one batch, and these rules accept
+// the batch only when it is consistent (one ballot per user per poll, every
+// count moves by exactly one, badges only at their milestone).
+//
+// Data:
+//   votes/{pollId}/ballots/{uid}         one immutable ballot per user per poll
+//   tallies/{pollId}/buckets/{bucket}    public counts, o<N> per option + total
+//                                        (issues: one bucket per constituency and
+//                                        category, mla-21_c3; o0 GOOD, o1 BAD,
+//                                        p0/p1 the same with a photo)
+//   users/{uid}                          voteCount, rate limit, last ballot/photo
+//   users/{uid}/badges/{badgeId}         earned badges
+//   photos/{pollId_uid_slot}             evidence photos, private until reviewed
+//   alerts/{pollId_bucket_slot_limit}    one admin alert per threshold event
+//   grievances/{id}                      public status of reported issues
+//   otherIssues/{pollId_uid}             free text for the "Other" category
+//   settings/{doc}                       thresholds and badge milestones
+//
+// Poll ids: mla-YYYY-MM, mp-YYYY-MM, issues-YYYY-MM, priority-YYYY-MM (the
+// month in India time, so only the current month is open) and f-<featured id>
+// (featured buckets are YYYY-MM-s<0-9>: ten counters per month).
+//
+// The emulator rejects ?: expressions, so conditions are written as and/or.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    // Voters: Google accounts and email accounts with a verified address
+    // (or phone sign-in). Unverified email accounts can read but not vote.
+    // Blocked accounts (admin panel → Users) cannot vote.
+    function voter() {
+      return signedIn()
+        && (request.auth.token.email_verified == true || request.auth.token.firebase.sign_in_provider == 'phone')
+        && !exists(/databases/$(database)/documents/blocked/$(request.auth.uid));
+    }
+
+    function isAdmin() {
+      return signedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    function isOwner() {
+      return isAdmin() && get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.role == 'owner';
+    }
+
+    function doc(p) {
+      return path('/databases/' + database + '/documents/' + p);
+    }
+
+    // Current month in India time (UTC+5:30), e.g. "2026-10".
+    function monthKey() {
+      let t = request.time + duration.value(330, 'm');
+      let months = ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'];
+      return string(t.year()) + '-' + months[t.month() - 1];
+    }
+
+    function kind(pollId) {
+      return pollId.split('-')[0];
+    }
+
+    function openPoll(pollId) {
+      return pollId.matches('^(mla|mp|issues|priority)-' + monthKey() + '$')
+        || pollId.matches('^f-[a-z0-9-]{1,40}$');
+    }
+
+    function validBucket(pollId, bucket) {
+      return (kind(pollId) == 'f' && bucket.matches('^' + monthKey() + '-s[0-9]$'))
+        || (kind(pollId) == 'mp' && bucket.matches('^mp-[0-9]{1,3}$'))
+        || (kind(pollId) in ['mla', 'issues', 'priority'] && bucket.matches('^mla-[0-9]{1,3}$'));
+    }
+
+    function ballotPath(pollId, uid) {
+      return 'votes/' + pollId + '/ballots/' + uid;
+    }
+
+    // The ballot is created by this very request.
+    function newBallot(p) {
+      return !exists(doc(p)) && existsAfter(doc(p));
+    }
+
+    // Badge milestones; admins can override them in settings/badges.
+    function reachedMilestone(count, badgeId) {
+      let defaults = {'first-voice': 1, 'active-voice': 5, 'active-citizen': 10,
+                      'peoples-voice': 25, 'community-champion': 50, 'peoples-ambassador': 100};
+      return (exists(doc('settings/badges'))
+              && count >= get(doc('settings/badges')).data.milestones[badgeId])
+        || (!exists(doc('settings/badges')) && count >= defaults[badgeId]);
+    }
+
+    // On the document being written: a count goes up by exactly one, stays
+    // the same, or only these keys change (new documents start at zero).
+    function bumped(key) {
+      return (resource == null && request.resource.data.get(key, 0) == 1)
+        || (resource != null && request.resource.data.get(key, 0) == resource.data.get(key, 0) + 1);
+    }
+
+    function same(key) {
+      return (resource == null && request.resource.data.get(key, 0) == 0)
+        || (resource != null && request.resource.data.get(key, 0) == resource.data.get(key, 0));
+    }
+
+    function changesOnly(keys) {
+      return (resource == null && request.resource.data.keys().hasOnly(keys))
+        || (resource != null && request.resource.data.diff(resource.data).affectedKeys().hasOnly(keys));
+    }
+
+    // The tally document at t goes up by one for key in this request.
+    function tallyBumped(t, key) {
+      return (!exists(doc(t)) && getAfter(doc(t)).data.get(key, 0) == 1)
+        || (exists(doc(t)) && getAfter(doc(t)).data.get(key, 0) == get(doc(t)).data.get(key, 0) + 1);
+    }
+
+    // ---------------------------------------------------------------- users
+    match /users/{uid} {
+      // Admins see vote counts (badge statistics), never ballots' choices.
+      allow read: if (signedIn() && request.auth.uid == uid) || isAdmin();
+      allow create: if voter() && request.auth.uid == uid && countsVote(uid, {});
+      allow update: if voter() && request.auth.uid == uid
+        && request.time > resource.data.lastActionAt + duration.value(2, 's')
+        && (countsVote(uid, resource.data) || addsPhoto(uid, resource.data));
+      allow delete: if false;
+
+      // voteCount moves by one together with a brand-new ballot of this user.
+      function countsVote(uid, old) {
+        let d = request.resource.data;
+        return d.keys().hasOnly(['voteCount', 'lastActionAt', 'lastBallot', 'lastPhoto'])
+          && d.voteCount == old.get('voteCount', 0) + 1
+          && d.lastActionAt == request.time
+          && d.get('lastPhoto', null) == old.get('lastPhoto', null)
+          && d.lastBallot is string
+          && d.lastBallot.matches('^votes/[a-z0-9-]+/ballots/' + uid + '$')
+          && newBallot(d.lastBallot);
+      }
+
+      function addsPhoto(uid, old) {
+        let d = request.resource.data;
+        return d.diff(old).affectedKeys().hasOnly(['lastPhoto', 'lastActionAt'])
+          && d.lastActionAt == request.time
+          && d.lastPhoto is string
+          && d.lastPhoto.matches('^[a-z0-9-]+_' + uid + '_c[0-9]{1,2}$')
+          && !exists(doc('photos/' + d.lastPhoto))
+          && existsAfter(doc('photos/' + d.lastPhoto));
+      }
+
+      match /badges/{badgeId} {
+        allow read: if signedIn() && request.auth.uid == uid;
+        allow create: if voter() && request.auth.uid == uid
+          && request.resource.data.keys().hasOnly(['at'])
+          && request.resource.data.at == request.time
+          && reachedMilestone(getAfter(doc('users/' + uid)).data.voteCount, badgeId);
+        allow update, delete: if false;
+      }
+    }
+
+    match /{path=**}/badges/{badgeId} {
+      allow read: if isAdmin();
+    }
+
+    // -------------------------------------------------------------- ballots
+    match /votes/{pollId}/ballots/{uid} {
+      allow read: if signedIn() && request.auth.uid == uid;
+      allow create: if voter() && request.auth.uid == uid
+        && openPoll(pollId)
+        && validBucket(pollId, request.resource.data.bucket)
+        && request.resource.data.at == request.time
+        && getAfter(doc('users/' + uid)).data.lastBallot == ballotPath(pollId, uid)
+        && ((kind(pollId) == 'issues' && issueBallot(pollId))
+            || (kind(pollId) != 'issues' && optionBallot(pollId)));
+      allow update, delete: if false;
+
+      function tallyPath(pollId) {
+        return 'tallies/' + pollId + '/buckets/' + request.resource.data.bucket;
+      }
+
+      function optionBallot(pollId) {
+        let d = request.resource.data;
+        return d.keys().hasOnly(['bucket', 'option', 'at'])
+          && d.option is int && d.option >= 0 && d.option < 40
+          && tallyBumped(tallyPath(pollId), 'o' + string(d.option));
+      }
+
+      // Each category's tally checks itself against this ballot.
+      function issueBallot(pollId) {
+        let d = request.resource.data;
+        return d.keys().hasOnly(['bucket', 'choices', 'at'])
+          && d.choices is map && d.choices.size() > 0 && d.choices.size() <= 12
+          && d.choices.values().hasOnly([0, 1])
+          && d.choices.keys().hasOnly(['c0', 'c1', 'c2', 'c3', 'c4', 'c5', 'c6', 'c7', 'c8', 'c9', 'c10', 'c11']);
+      }
+    }
+
+    // --------------------------------------------------------------- tallies
+    match /tallies/{pollId}/buckets/{bucket} {
+      allow read: if true;
+      allow create, update: if voter()
+        && ((kind(pollId) == 'issues' && (issueVote(pollId, bucket) || photoAdded(pollId, bucket)))
+            || (kind(pollId) != 'issues' && optionVote(pollId, bucket)));
+      allow delete: if false;
+
+      function myBallot(pollId) {
+        return ballotPath(pollId, request.auth.uid);
+      }
+
+      function optionVote(pollId, bucket) {
+        let b = getAfter(doc(myBallot(pollId))).data;
+        let key = 'o' + string(b.option);
+        return newBallot(myBallot(pollId))
+          && b.bucket == bucket
+          && changesOnly([key, 'total'])
+          && bumped(key) && bumped('total');
+      }
+
+      // Bucket mla-21_c3: this voter's GOOD (o0) or BAD (o1) for category c3.
+      function issueVote(pollId, bucket) {
+        let b = getAfter(doc(myBallot(pollId))).data;
+        let slot = bucket.split('_')[1];
+        let key = 'o' + string(b.choices[slot]);
+        return newBallot(myBallot(pollId))
+          && b.bucket + '_' + slot == bucket
+          && changesOnly([key, 'total'])
+          && bumped(key) && bumped('total');
+      }
+
+      // p0 / p1 count GOOD / BAD votes that came with a photo.
+      function photoAdded(pollId, bucket) {
+        let id = getAfter(doc('users/' + request.auth.uid)).data.lastPhoto;
+        let p = getAfter(doc('photos/' + id)).data;
+        let key = 'p' + string(p.choice);
+        return !exists(doc('photos/' + id))
+          && p.pollId == pollId && p.bucket + '_' + p.slot == bucket
+          && changesOnly([key])
+          && bumped(key);
+      }
+    }
+
+    // ---------------------------------------------------------------- photos
+    match /photos/{id} {
+      allow read: if isAdmin() || (signedIn() && resource.data.uid == request.auth.uid);
+      allow create: if voter() && validPhoto(id);
+      allow update: if isAdmin()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'reviewedAt'])
+        && request.resource.data.status in ['pending', 'approved', 'rejected'];
+      allow delete: if false;
+
+      function validPhoto(id) {
+        let d = request.resource.data;
+        let uid = request.auth.uid;
+        let ballot = get(doc(ballotPath(d.pollId, uid))).data;
+        return d.keys().hasOnly(['pollId', 'bucket', 'slot', 'choice', 'uid', 'file', 'caption', 'status', 'at'])
+          && id == d.pollId + '_' + uid + '_' + d.slot
+          && d.uid == uid
+          && kind(d.pollId) == 'issues' && openPoll(d.pollId)
+          && ballot.bucket == d.bucket
+          && ballot.choices.get(d.slot, -1) == d.choice
+          && d.file is string && d.file.matches('^issue-photos/' + uid + '/[A-Za-z0-9_.-]{1,80}$')
+          && d.caption is string && d.caption.size() <= 140
+          && d.status == 'pending'
+          && d.at == request.time
+          && getAfter(doc('users/' + uid)).data.lastPhoto == id
+          && tallyBumped('tallies/' + d.pollId + '/buckets/' + d.bucket + '_' + d.slot, 'p' + string(d.choice));
+      }
+    }
+
+    // ---------------------------------------------------------------- alerts
+    // Raised by the voter whose BAD vote crosses the admin threshold; the id
+    // includes the threshold, so each threshold event is raised only once.
+    match /alerts/{id} {
+      allow read, update, delete: if isAdmin();
+      allow create: if voter() && validAlert(id);
+
+      // The threshold in force for this category (settings/thresholds), default 100.
+      function thresholdOk(slot, limit) {
+        let p = doc('settings/thresholds');
+        return (exists(p) && limit == get(p).data.get('bySlot', {}).get(slot, get(p).data.get('default', 100)))
+          || (!exists(p) && limit == 100);
+      }
+
+      function validAlert(id) {
+        let d = request.resource.data;
+        let t = getAfter(doc('tallies/' + d.pollId + '/buckets/' + d.bucket + '_' + d.slot)).data;
+        return d.keys().hasOnly(['pollId', 'bucket', 'slot', 'threshold', 'at', 'seen'])
+          && id == d.pollId + '_' + d.bucket + '_' + d.slot + '_' + string(d.threshold)
+          && kind(d.pollId) == 'issues'
+          && d.slot.matches('^c[0-9]{1,2}$')
+          && thresholdOk(d.slot, d.threshold)
+          && t.get('o1', 0) >= d.threshold
+          && d.at == request.time
+          && d.seen == false;
+      }
+    }
+
+    // ------------------------------------------------------------ grievances
+    match /grievances/{id} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /otherIssues/{id} {
+      allow read: if isAdmin();
+      allow create: if voter()
+        && request.resource.data.keys().hasOnly(['pollId', 'bucket', 'text'])
+        && id == request.resource.data.pollId + '_' + request.auth.uid
+        && kind(request.resource.data.pollId) == 'issues'
+        && request.resource.data.text is string
+        && request.resource.data.text.size() > 0 && request.resource.data.text.size() <= 80
+        && newBallot(ballotPath(request.resource.data.pollId, request.auth.uid));
+      allow update, delete: if false;
+    }
+
+    // -------------------------------------------------------------- settings
+    match /settings/{doc} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // App/website configuration: everyone reads, only admins publish.
+    match /config/{doc} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Admin team. The first owner comes from tools/create_admin.py; owners
+    // add or remove admins in the admin panel. Everyone may update only
+    // their own name, username and the "must change password" flag
+    // (cleared after the first sign-in).
+    match /admins/{uid} {
+      allow read: if isAdmin() || (signedIn() && request.auth.uid == uid);
+      allow update: if isAdmin() && request.auth.uid == uid
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['displayName', 'username', 'mustChangePassword'])
+        && request.resource.data.get('mustChangePassword', false) == false;
+      allow create: if isOwner()
+        && request.resource.data.keys().hasOnly(['role', 'username', 'displayName', 'mustChangePassword'])
+        && request.resource.data.role == 'admin'
+        && request.resource.data.mustChangePassword == true;
+      allow delete: if isOwner() && request.auth.uid != uid;
+    }
+
+    // Voter's account details, for admins handling abuse (Users page).
+    match /profiles/{uid} {
+      allow read: if isAdmin() || (signedIn() && request.auth.uid == uid);
+      allow create, update: if signedIn() && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['email', 'name', 'provider', 'lastSeen'])
+        && request.resource.data.email == request.auth.token.get('email', '')
+        && request.resource.data.name is string && request.resource.data.name.size() <= 100
+        && request.resource.data.lastSeen == request.time;
+      allow delete: if false;
+    }
+
+    match /blocked/{uid} {
+      allow read: if isAdmin() || (signedIn() && request.auth.uid == uid);
+      allow write: if isAdmin();
+    }
+  }
+}

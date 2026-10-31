@@ -1,0 +1,100 @@
+name: Build
+
+on:
+  push:
+    branches: [main, master, 'claude/**']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  # Security rules and the app's database writes, against the Firestore emulator.
+  rules:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - working-directory: test/rules
+        run: npm ci || npm install
+      - working-directory: test/rules
+        run: npm test
+      - working-directory: test/rules
+        run: npm run test:app
+
+  # The Cloud Run container's nginx config must be valid.
+  hosting:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          mkdir -p build/web && echo '<html>ok</html>' > build/web/index.html
+          docker build -f hosting/Dockerfile -t votewala-web .
+          docker run -d -p 8080:8080 --name web votewala-web
+          sleep 2
+          curl -fsS http://localhost:8080/ | grep ok
+          curl -fsSI http://localhost:8080/ | grep -i 'cache-control: no-cache'
+
+  android-apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: flutter analyze
+      - run: flutter test
+      - name: Check candidate photo URLs
+        run: tools/check_photos.sh
+        continue-on-error: true
+      - name: Apply admin app icon
+        env:
+          FIREBASE_API_KEY: AIzaSyAimoZLqju6M4goUgfSvPxXmZaEhvBzu-I
+          FIREBASE_PROJECT_ID: votewala-a2dcd
+        run: |
+          python3 tools/apply_remote_icon.py
+          if [ -f brand/app-icon-override.png ]; then pip install pillow && python3 tools/make_brand_assets.py; fi
+      # Build number grows every run so each APK installs as an update.
+      - run: flutter build apk --release --split-per-abi --build-number=$((100 + ${{ github.run_number }})) --dart-define=SITE_URL="$(head -n1 hosting/SITE_URL)"
+      - run: |
+          cp build/app/outputs/flutter-apk/app-arm64-v8a-release.apk VoteWala.apk
+          cp build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk VoteWala-old-phones.apk
+          ls -la *.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: VoteWala-apk
+          path: VoteWala*.apk
+      # Pushes only test and build; replacing the testers' APK is a manual run.
+      - name: Publish test release
+        if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[release-apk]')
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: test-build
+          name: VoteWala test build
+          prerelease: true
+          make_latest: false
+          target_commitish: ${{ github.sha }}
+          body: |
+            Test APK built from ${{ github.ref_name }} @ ${{ github.sha }} (build ${{ github.run_number }}).
+            VoteWala.apk works on almost all phones (64-bit). VoteWala-old-phones.apk is for very old 32-bit phones.
+            Signed with the VoteWala test key: for testing only, not for the Play Store.
+          files: |
+            VoteWala.apk
+            VoteWala-old-phones.apk

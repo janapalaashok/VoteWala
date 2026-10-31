@@ -1,0 +1,8 @@
+# Changing this file deploys the website to Cloud Run (approved releases only).
+2026-10-30 first Cloud Run release
+2026-10-30 Google sign-in release
+2026-10-30 one-page sign-in (email + Google), AP scene
+2026-10-31 login page: AP collage on desktop, larger logo, corner language switch
+2026-10-31 dashboard redesign, Vote now / See results, legal pages, footer
+2026-10-31 desktop pages, closed polls, admin username login
+2026-10-31 production release: inner desktop pages, admin team/users/legal, link previews, votewala.in

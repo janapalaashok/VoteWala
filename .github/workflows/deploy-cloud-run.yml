@@ -1,0 +1,65 @@
+name: Deploy website (Cloud Run)
+
+# Builds the Flutter website into an nginx container and deploys it to Cloud
+# Run in the same Google Cloud project (votewala-a2dcd, Mumbai). Database,
+# login and photos are unchanged: they are already Google Cloud services.
+#
+# Manual only. Needs the GCP_SERVICE_ACCOUNT secret (falls back to
+# FIREBASE_SERVICE_ACCOUNT) with: Cloud Run Admin, Artifact Registry Administrator,
+# Service Account User. One-time: enable the Cloud Run and Artifact Registry APIs.
+# See docs/GCP_HOSTING.md.
+on:
+  # A release is approved by editing hosting/RELEASE; code pushes never deploy.
+  push:
+    paths: [hosting/RELEASE]
+  workflow_dispatch:
+    inputs:
+      site_url:
+        description: 'Public address (custom domain); empty = the Cloud Run address'
+        required: false
+        default: ''
+
+env:
+  PROJECT: votewala-a2dcd
+  PROJECT_NUMBER: '596383314349'
+  REGION: asia-south1
+  SERVICE: votewala
+  REPO: votewala
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Build website
+        run: |
+          # Cloud Run's address is fixed: https://SERVICE-PROJECT_NUMBER.REGION.run.app
+          SITE_URL="${{ inputs.site_url }}"
+          SITE_URL="${SITE_URL:-$(head -n1 hosting/SITE_URL 2>/dev/null)}"
+          SITE_URL="${SITE_URL:-https://$SERVICE-$PROJECT_NUMBER.$REGION.run.app}"
+          echo "Site: $SITE_URL"
+          flutter pub get
+          flutter build web --release --dart-define=SITE_URL="$SITE_URL"
+      - uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SERVICE_ACCOUNT || secrets.FIREBASE_SERVICE_ACCOUNT }}
+      - uses: google-github-actions/setup-gcloud@v2
+      - name: Build and push the container
+        run: |
+          gcloud artifacts repositories describe "$REPO" --location "$REGION" --project "$PROJECT" >/dev/null 2>&1 ||
+            gcloud artifacts repositories create "$REPO" --repository-format docker --location "$REGION" --project "$PROJECT"
+          gcloud auth configure-docker "$REGION-docker.pkg.dev" --quiet
+          IMAGE="$REGION-docker.pkg.dev/$PROJECT/$REPO/web:${GITHUB_SHA::12}"
+          docker build -f hosting/Dockerfile -t "$IMAGE" .
+          docker push "$IMAGE"
+          echo "IMAGE=$IMAGE" >> "$GITHUB_ENV"
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run deploy "$SERVICE" --image "$IMAGE" --region "$REGION" --project "$PROJECT" \
+            --allow-unauthenticated --port 8080 --cpu 1 --memory 256Mi \
+            --min-instances 0 --max-instances 10 --concurrency 200
+          gcloud run services describe "$SERVICE" --region "$REGION" --project "$PROJECT" --format 'value(status.url)'

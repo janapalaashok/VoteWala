@@ -1,0 +1,19 @@
+name: Create starting admin
+
+# Creates the "admin" account if missing (never changes an existing one).
+# Runs when hosting/ADMIN_BOOTSTRAP changes.
+on:
+  push:
+    paths: [hosting/ADMIN_BOOTSTRAP]
+  workflow_dispatch:
+
+jobs:
+  admin:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          pip install google-auth requests
+          python3 tools/create_admin.py

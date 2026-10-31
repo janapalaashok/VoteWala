@@ -1,0 +1,35 @@
+name: Deploy website
+
+# Builds the Flutter website and publishes it to Firebase Hosting, which
+# serves https://votewala.in (and votewala-a2dcd.web.app). Needs the
+# FIREBASE_SERVICE_ACCOUNT secret (see docs/FIREBASE_SETUP.md).
+# A release is approved by editing hosting/RELEASE; code pushes never deploy.
+on:
+  push:
+    paths: [hosting/RELEASE]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      HAS_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT != '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check deploy credentials
+        if: env.HAS_SERVICE_ACCOUNT != 'true'
+        run: echo "::warning::Add the FIREBASE_SERVICE_ACCOUNT secret to deploy the website (docs/FIREBASE_SETUP.md)."
+      - uses: subosito/flutter-action@v2
+        if: env.HAS_SERVICE_ACCOUNT == 'true'
+        with:
+          channel: stable
+          cache: true
+      - if: env.HAS_SERVICE_ACCOUNT == 'true'
+        run: flutter pub get && flutter build web --release --dart-define=SITE_URL="$(head -n1 hosting/SITE_URL)"
+      - name: Deploy to Firebase Hosting
+        if: env.HAS_SERVICE_ACCOUNT == 'true'
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          pip install google-auth requests
+          python3 tools/deploy_hosting.py votewala-a2dcd build/web

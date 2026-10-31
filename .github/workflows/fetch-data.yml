@@ -1,0 +1,29 @@
+name: Fetch 2024 results
+
+on:
+  push:
+    branches: ['claude/**']
+    paths: ['tools/fetch_2024_results.py', 'tools/fetch_more_photos.py', '.github/workflows/fetch-data.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install beautifulsoup4
+      - run: mkdir -p tools/data && python tools/fetch_2024_results.py > tools/data/results-2024.txt
+      - run: python tools/fetch_more_photos.py
+      - name: Commit fetched data
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add tools/data/results-2024.txt tools/data/photos-extra.txt
+          git diff --cached --quiet || git commit -m "Update fetched 2024 results data"
+          git pull --rebase && git push

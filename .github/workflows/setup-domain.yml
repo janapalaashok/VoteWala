@@ -1,0 +1,19 @@
+name: Connect domain
+
+# Connects votewala.in to Firebase Hosting, allows sign-in on it and prints
+# the DNS records to add. Runs when hosting/DOMAIN_SETUP changes.
+on:
+  push:
+    paths: [hosting/DOMAIN_SETUP]
+  workflow_dispatch:
+
+jobs:
+  domain:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          pip install google-auth requests
+          python3 tools/setup_domain.py "$(head -n1 hosting/DOMAIN_SETUP)"
