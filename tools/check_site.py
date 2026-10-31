@@ -58,3 +58,20 @@ for name in (DOMAIN, f"www.{DOMAIN}"):
     print(name, json.dumps(d, indent=1)[:3000])
 print("legacy domains:", s.get(f"https://firebasehosting.googleapis.com/v1beta1/sites/{SITE}/domains").text[:2000])
 print("releases:", s.get(f"https://firebasehosting.googleapis.com/v1beta1/sites/{SITE}/releases", params={"pageSize": 2}).text[:1500])
+
+print("\n=== From other countries (check-host.net) ===")
+import time  # noqa: E402
+
+try:
+    nodes = requests.get("https://check-host.net/nodes/hosts", timeout=20).json()["nodes"]
+    pick = [n for n, v in nodes.items() if v.get("location", [""])[0] in ("in", "sg", "ae", "jp")][:6]
+    print("nodes:", pick)
+    for url in (f"https://{DOMAIN}/", f"http://{DOMAIN}/"):
+        q = "&".join(f"node={n}" for n in pick)
+        req = requests.get(f"https://check-host.net/check-http?host={url}&{q}", headers={"Accept": "application/json"}, timeout=20).json()
+        time.sleep(15)
+        res = requests.get(f"https://check-host.net/check-result/{req['request_id']}", headers={"Accept": "application/json"}, timeout=20).json()
+        for node, r in res.items():
+            print(url, nodes[node]["location"][1:3], r)
+except Exception as e:  # noqa: BLE001
+    print("check-host failed:", e)
