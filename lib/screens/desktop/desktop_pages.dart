@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../data/external_data.dart';
 import '../../data/ap_data.dart';
 import '../../data/civic.dart';
 import '../../data/poll_month.dart';
@@ -10,6 +11,7 @@ import '../../state/app_state.dart';
 import '../../theme.dart';
 import '../../utils.dart';
 import '../../widgets/common.dart';
+import '../../widgets/external_data.dart';
 import '../achievements_screen.dart';
 import '../ap_map_screen.dart';
 import '../constituency_list_screen.dart';
@@ -405,6 +407,10 @@ class _DesktopResultsState extends State<DesktopResults> {
             ),
           ]),
         ),
+        if (_type == ElectionType.mla && ExternalData.assembly.containsKey(_month.key)) ...[
+          const SizedBox(height: 20),
+          ExternalAssemblyCard(month: _month),
+        ],
         const SizedBox(height: 32),
         Text(context.tr('districtWise'), style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800)),
         const SizedBox(height: 14),

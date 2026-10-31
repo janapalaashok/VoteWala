@@ -8,6 +8,7 @@ import '../state/app_state.dart';
 import '../theme.dart';
 import '../utils.dart';
 import '../widgets/common.dart';
+import '../widgets/external_data.dart';
 import 'ap_map_screen.dart';
 import 'constituency_list_screen.dart';
 import 'main_shell.dart';
@@ -128,6 +129,10 @@ class _ResultsScreenState extends State<ResultsScreen> {
                     style: const TextStyle(color: AppColors.muted, fontSize: 12.5)),
               ]),
             ),
+            if (_type == ElectionType.mla) ...[
+              const SizedBox(height: 10),
+              ExternalAssemblyCard(month: _month),
+            ],
             SectionHeader(
               context.tr('districtWise'),
               action: context.tr('apMap'),

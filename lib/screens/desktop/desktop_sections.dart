@@ -9,6 +9,7 @@ import '../../state/app_state.dart';
 import '../../theme.dart';
 import '../../utils.dart';
 import '../../widgets/common.dart';
+import '../../widgets/external_data.dart';
 import '../featured_poll_screen.dart';
 import '../home_screen.dart';
 import '../live_results_screen.dart';
@@ -272,6 +273,7 @@ class _FeaturedTile extends StatelessWidget {
           if (poll.options.length > 3)
             Text(context.tr('moreOptions', {'n': '${poll.options.length - 3}'}),
                 style: const TextStyle(color: AppColors.muted, fontSize: 12.5)),
+          ExternalFeaturedNote(poll: poll),
           const Spacer(),
           const SizedBox(height: 14),
           const Divider(height: 1),

@@ -11,6 +11,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../admin/file_pick.dart';
 import '../data/ap_data.dart';
 import '../data/civic.dart';
+import '../data/external_votes.dart';
 import '../data/featured_polls.dart';
 import '../data/poll_month.dart';
 import '../l10n/strings.dart';
@@ -18,6 +19,7 @@ import '../screens/ap_map_screen.dart';
 import '../state/app_state.dart';
 import '../theme.dart';
 import 'common.dart';
+import 'external_data.dart';
 
 /// Public website; links open the poll directly (see main.dart deep links).
 /// Builds for another host pass --dart-define=SITE_URL=https://...
@@ -130,7 +132,7 @@ ShareCardData featuredShareData(BuildContext context, FeaturedPoll p, List<int> 
   return ShareCardData(
     headline: voted ? civic.shareMessage(te) : context.tr('shareHeadlineView'),
     title: p.title(te),
-    subtitle: p.question(te),
+    subtitle: hasExternalFeatured(p) ? '${p.question(te)}\n(${externalLabel(context)})' : p.question(te),
     myChoice: showChoice && voted ? p.options[mine].label(te) : null,
     rows: [for (final i in order.take(2)) ShareRow(p.options[i].label(te), share(i), colorOf(i), avatar(i))],
     hook: hook,
