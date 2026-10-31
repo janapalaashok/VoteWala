@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../data/external_votes.dart';
 import '../data/featured_polls.dart';
 import '../data/poll_month.dart';
 import '../l10n/strings.dart';
@@ -8,6 +9,7 @@ import '../state/app_state.dart';
 import '../theme.dart';
 import '../utils.dart';
 import '../widgets/common.dart';
+import '../widgets/external_data.dart';
 import '../widgets/vote_flow.dart';
 import '../widgets/share_card.dart';
 
@@ -84,6 +86,7 @@ class FeaturedPollCard extends StatelessWidget {
               : context.tr('leadingNow', {'x': '${poll.options[lead].label(te)} ${_pct(totals[lead], total)}%'}),
           style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
         ),
+        ExternalFeaturedNote(poll: poll),
         const SizedBox(height: 2),
         Row(children: [
           Expanded(child: Text(subtitle, style: const TextStyle(color: AppColors.muted, fontSize: 12))),
@@ -325,6 +328,7 @@ class _FeaturedPollScreenState extends State<FeaturedPollScreen> {
                 ),
               Text(context.tr('totalSoFar', {'n': formatIndian(total)}),
                   style: const TextStyle(color: AppColors.muted, fontSize: 12.5)),
+              ExternalFeaturedNote(poll: poll),
               ResultsDisclaimer(participants: total),
             ],
             if (poll.hasMonthlyUpdates) ...[
@@ -377,6 +381,7 @@ class _MonthRow extends StatelessWidget {
                   ]),
           ),
         ),
+        if (hasExternalFeatured(poll, month)) const ExternalDataLabel(),
         const SizedBox(height: 4),
         Text(
           total == 0

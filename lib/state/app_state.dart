@@ -8,6 +8,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../config/config_service.dart';
 import '../data/ap_data.dart';
 import '../data/civic.dart';
+import '../data/external_data.dart';
+import '../data/external_votes.dart';
 import '../data/featured_polls.dart';
 import '../data/grievance.dart';
 import '../data/poll_month.dart';
@@ -355,6 +357,14 @@ class AppState extends ChangeNotifier {
       if (!include(e.key)) continue;
       for (var i = 0; i < votes.length; i++) {
         votes[i] += e.value['o$i'] ?? 0;
+      }
+    }
+    // Votes collected on Facebook before VoteWala (shown with a label).
+    for (final m in ExternalData.featured[p.id]?.keys ?? const <String>[]) {
+      if (!include('$m-ext')) continue;
+      final ext = externalFeaturedVotes(p, m);
+      for (var i = 0; i < votes.length; i++) {
+        votes[i] += ext[i];
       }
     }
     return votes;
