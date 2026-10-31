@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -11,6 +13,7 @@ import 'screens/main_shell.dart';
 import 'services/auth_service.dart';
 import 'services/firebase_auth_service.dart';
 import 'services/firestore_client.dart';
+import 'services/traffic.dart';
 import 'services/vote_service.dart';
 import 'screens/welcome_screen.dart';
 import 'state/app_state.dart';
@@ -48,8 +51,10 @@ Future<void> main() async {
       FirebasePhotoStore(settings, authService.idToken),
     );
   }
+  if (!_demo) traffic = Traffic(votes.store, prefs);
   final state = AppState(prefs, auth: authService, votes: votes);
   await state.restoreSession();
+  unawaited(traffic?.visit(signedIn: state.user != null));
   runApp(VoteWalaApp(state: state));
 }
 

@@ -61,7 +61,7 @@ class FirebaseAuthService implements AuthService {
   @override
   bool get supportsPhone => const bool.fromEnvironment('PHONE_LOGIN');
 
-  static AppUser _toUser(User u) {
+  static AppUser _toUser(User u, {bool isNew = false}) {
     final providers = {for (final p in u.providerData) p.providerId};
     return AppUser(
       uid: u.uid,
@@ -76,6 +76,7 @@ class FirebaseAuthService implements AuthService {
       // Phone accounts have no email to verify.
       emailVerified: u.emailVerified || providers.contains('phone'),
       hasPassword: providers.contains('password'),
+      isNew: isNew,
     );
   }
 
@@ -91,7 +92,7 @@ class FirebaseAuthService implements AuthService {
         final provider = GoogleAuthProvider()..setCustomParameters({'prompt': 'select_account'});
         // Web: popup. Android/iOS: the system browser's Google sign-in page.
         final cred = kIsWeb ? await _auth.signInWithPopup(provider) : await _auth.signInWithProvider(provider);
-        return _toUser(cred.user!);
+        return _toUser(cred.user!, isNew: cred.additionalUserInfo?.isNewUser ?? false);
       });
 
   @override
@@ -104,7 +105,7 @@ class FirebaseAuthService implements AuthService {
   Future<AppUser> registerWithEmail(String email, String password) => _guard(() async {
         final cred = await _auth.createUserWithEmailAndPassword(email: email.trim(), password: password);
         await cred.user!.sendEmailVerification();
-        return _toUser(cred.user!);
+        return _toUser(cred.user!, isNew: true);
       });
 
   @override

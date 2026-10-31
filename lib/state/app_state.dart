@@ -15,6 +15,7 @@ import '../data/grievance.dart';
 import '../data/poll_month.dart';
 import '../data/poll_repository.dart';
 import '../services/auth_service.dart';
+import '../services/traffic.dart';
 import '../services/vote_service.dart';
 
 class AppUser {
@@ -26,6 +27,7 @@ class AppUser {
     required this.provider,
     this.emailVerified = true,
     this.hasPassword = false,
+    this.isNew = false,
   });
 
   /// Firebase user id: votes are counted against it (one vote per account).
@@ -40,6 +42,9 @@ class AppUser {
 
   /// Can also sign in with email + password.
   final bool hasPassword;
+
+  /// The account was created by this sign-in.
+  final bool isNew;
 }
 
 /// A constituency vote the user cast in a monthly poll.
@@ -139,13 +144,15 @@ class AppState extends ChangeNotifier {
   Future<void> restoreSession() async {
     try {
       final u = await auth.restore();
-      if (u != null) await signIn(u);
+      if (u != null) await signIn(u, restored: true);
     } catch (e) {
       debugPrint('Session restore failed: $e');
     }
   }
 
-  Future<void> signIn(AppUser user) async {
+  /// [restored]: the previous session, not a new sign-in.
+  Future<void> signIn(AppUser user, {bool restored = false}) async {
+    if (!restored) unawaited(traffic?.login(user.provider, isNew: user.isNew));
     _user = user;
     _record = VoterRecord();
     _blocked = false;

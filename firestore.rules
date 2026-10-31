@@ -355,5 +355,41 @@ service cloud.firestore {
       allow read: if isAdmin() || (signedIn() && request.auth.uid == uid);
       allow write: if isAdmin();
     }
+
+    // Anonymous traffic for the admin dashboard: one visit per visitor per
+    // day, one record per sign-in. Write-once, admins read.
+    function shortText(v) {
+      return v is string && v.size() <= 60;
+    }
+
+    match /traffic/{day}/visits/{vid} {
+      allow read: if isAdmin();
+      allow create: if day.matches('^20[2-9][0-9]-[01][0-9]-[0-3][0-9]$')
+        && vid.matches('^[A-Za-z0-9]{16,32}$')
+        && request.resource.data.keys().hasOnly(['platform', 'device', 'os', 'browser', 'country', 'tz', 'lang',
+             'source', 'ref', 'landing', 'signedIn', 'at'])
+        && request.resource.data.platform in ['web', 'android', 'ios']
+        && request.resource.data.device in ['mobile', 'tablet', 'desktop']
+        && shortText(request.resource.data.os) && shortText(request.resource.data.browser)
+        && request.resource.data.country is string && request.resource.data.country.matches('^[A-Z]{2}$')
+        && shortText(request.resource.data.tz) && shortText(request.resource.data.lang)
+        && shortText(request.resource.data.source) && shortText(request.resource.data.ref)
+        && shortText(request.resource.data.landing)
+        && request.resource.data.signedIn is bool
+        && request.resource.data.at == request.time;
+      allow update, delete: if false;
+    }
+
+    match /traffic/{day}/logins/{id} {
+      allow read: if isAdmin();
+      allow create: if signedIn()
+        && day.matches('^20[2-9][0-9]-[01][0-9]-[0-3][0-9]$')
+        && request.resource.data.keys().hasOnly(['method', 'kind', 'platform', 'at'])
+        && request.resource.data.method in ['google', 'password', 'phone', 'other']
+        && request.resource.data.kind in ['signup', 'login']
+        && request.resource.data.platform in ['web', 'android', 'ios']
+        && request.resource.data.at == request.time;
+      allow update, delete: if false;
+    }
   }
 }
