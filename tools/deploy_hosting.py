@@ -38,7 +38,10 @@ def check(r):
 
 config = {
     "headers": [
-        {"glob": "**/*.@(js|wasm|png|otf|ttf|json)", "headers": {"Cache-Control": "public, max-age=3600"}},
+        # App code keeps fixed file names: browsers must check for a new
+        # release every time (cheap: unchanged files answer 304).
+        {"glob": "**/*.@(js|json|mjs)", "headers": {"Cache-Control": "no-cache"}},
+        {"glob": "**/*.@(wasm|png|jpg|webp|otf|ttf)", "headers": {"Cache-Control": "public, max-age=3600"}},
         {"glob": "/index.html", "headers": {"Cache-Control": "no-cache"}},
         {"glob": "/", "headers": {"Cache-Control": "no-cache"}},
     ]
