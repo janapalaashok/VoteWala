@@ -8,6 +8,16 @@ import '../config/firebase_rest.dart';
 import '../state/app_state.dart';
 import 'auth_service.dart';
 
+/// Domain that hosts the Google sign-in handler. On votewala.in the handler
+/// is served from the site itself, so the Google popup says "continue to
+/// votewala.in" (needs https://votewala.in/__/auth/handler among the OAuth
+/// client's redirect URIs). Other addresses keep the default firebaseapp.com.
+String webAuthDomain(String projectId, String host) {
+  const custom = String.fromEnvironment('AUTH_DOMAIN', defaultValue: 'votewala.in');
+  if (custom.isNotEmpty && (host == custom || host == 'www.$custom')) return custom;
+  return '$projectId.firebaseapp.com';
+}
+
 /// Firebase project options for the apps (from the Firebase console; these
 /// identifiers are public, access is controlled by the security rules).
 FirebaseOptions firebaseOptions(FirebaseSettings s) => kIsWeb
@@ -16,7 +26,7 @@ FirebaseOptions firebaseOptions(FirebaseSettings s) => kIsWeb
         appId: const String.fromEnvironment('FIREBASE_WEB_APP_ID', defaultValue: '1:596383314349:web:719240a1d80d3b14097124'),
         messagingSenderId: '596383314349',
         projectId: s.projectId,
-        authDomain: '${s.projectId}.firebaseapp.com',
+        authDomain: webAuthDomain(s.projectId, Uri.base.host),
         storageBucket: s.storageBucket,
       )
     : FirebaseOptions(

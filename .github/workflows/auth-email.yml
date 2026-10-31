@@ -1,0 +1,25 @@
+name: Sign-in emails
+
+# Sets the sender of verification / password-reset emails to VoteWala
+# (contact@votewala.in). With the SMTP_PASSWORD secret (the contact@votewala.in
+# mailbox password) the emails are sent through that mailbox. Run it from the
+# Actions tab, or by editing hosting/AUTH_EMAIL.
+on:
+  workflow_dispatch:
+  push:
+    paths: [hosting/AUTH_EMAIL]
+
+jobs:
+  email:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+          SMTP_HOST: ${{ vars.SMTP_HOST }}
+          SMTP_PORT: ${{ vars.SMTP_PORT }}
+          SMTP_SECURITY: ${{ vars.SMTP_SECURITY }}
+        run: |
+          pip install google-auth requests
+          python3 tools/auth_email.py
