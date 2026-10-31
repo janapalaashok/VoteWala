@@ -1,0 +1,18 @@
+name: Check site
+
+# Diagnoses why votewala.in does or does not open. Changes nothing.
+on:
+  workflow_dispatch:
+  push:
+    paths: [tools/check_site.py, .github/workflows/check-site.yml]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          pip install google-auth requests
+          python3 tools/check_site.py
