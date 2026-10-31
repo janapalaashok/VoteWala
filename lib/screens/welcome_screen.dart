@@ -8,7 +8,7 @@ import '../services/auth_service.dart';
 import '../state/app_state.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
-import 'info_screens.dart';
+import 'legal_screens.dart';
 import 'login_screen.dart';
 
 /// First screen: language, sign in / register with email, or Google (which
@@ -265,11 +265,6 @@ class _AuthFormState extends State<AuthForm> {
   @override
   Widget build(BuildContext context) {
     final linkStyle = TextStyle(color: AppColors.orange, fontWeight: FontWeight.w700);
-    void openInfo(String title, String body) => Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => InfoScreen(titleKey: title, bodyKey: body),
-      ),
-    );
 
     return AutofillGroup(
       child: Column(
@@ -400,13 +395,13 @@ class _AuthFormState extends State<AuthForm> {
                 TextSpan(
                   text: context.tr('terms'),
                   style: linkStyle,
-                  recognizer: TapGestureRecognizer()..onTap = () => openInfo('terms', 'termsBody'),
+                  recognizer: TapGestureRecognizer()..onTap = () => openLegal(context, 'terms'),
                 ),
                 TextSpan(text: ' ${context.tr('and')} '),
                 TextSpan(
                   text: context.tr('privacyPolicy'),
                   style: linkStyle,
-                  recognizer: TapGestureRecognizer()..onTap = () => openInfo('privacyPolicy', 'privacyBody'),
+                  recognizer: TapGestureRecognizer()..onTap = () => openLegal(context, 'privacy'),
                 ),
                 const TextSpan(text: '.'),
               ],

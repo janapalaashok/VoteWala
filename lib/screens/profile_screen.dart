@@ -7,6 +7,7 @@ import '../widgets/common.dart';
 import 'achievements_screen.dart';
 import 'login_screen.dart';
 import 'info_screens.dart';
+import 'legal_screens.dart';
 import 'welcome_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
@@ -196,10 +197,9 @@ class ProfileScreen extends StatelessWidget {
                 () => _push(context, const NotificationSettingsScreen())),
             item(Icons.language, context.tr('language'), () => _chooseLanguage(context),
                 trailing: state.isTelugu ? 'తెలుగు' : 'English'),
-            item(Icons.privacy_tip_outlined, context.tr('privacyPolicy'),
-                () => _push(context, const InfoScreen(titleKey: 'privacyPolicy', bodyKey: 'privacyBody'))),
-            item(Icons.description_outlined, context.tr('terms'),
-                () => _push(context, const InfoScreen(titleKey: 'terms', bodyKey: 'termsBody'))),
+            item(Icons.privacy_tip_outlined, context.tr('privacyPolicy'), () => openLegal(context, 'privacy')),
+            item(Icons.description_outlined, context.tr('terms'), () => openLegal(context, 'terms')),
+            item(Icons.gavel_outlined, context.tr('legalPolicies'), () => openLegalIndex(context)),
             item(Icons.info_outline, context.tr('aboutApp'),
                 () => _push(context, const InfoScreen(titleKey: 'aboutApp', bodyKey: 'aboutBody', showVersion: true))),
             Padding(

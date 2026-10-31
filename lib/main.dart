@@ -5,6 +5,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'admin/admin_app.dart';
 import 'config/config_service.dart';
+import 'l10n/legal.dart';
+import 'screens/legal_screens.dart';
 import 'screens/main_shell.dart';
 import 'services/auth_service.dart';
 import 'services/firebase_auth_service.dart';
@@ -60,20 +62,28 @@ class VoteWalaApp extends StatelessWidget {
   Widget build(BuildContext context) => AppScope(
         state: state,
         child: ListenableBuilder(
-          listenable: state,
-          builder: (context, _) => MaterialApp(
-            title: appConfig.branding.appName,
-            debugShowCheckedModeBanner: false,
-            theme: buildTheme(),
-            locale: Locale(state.language),
-            supportedLocales: const [Locale('en'), Locale('te')],
-            localizationsDelegates: GlobalMaterialLocalizations.delegates,
-            home: state.user == null
-                ? const WelcomeScreen()
-                : !state.user!.emailVerified
-                    ? const VerifyEmailScreen()
-                    : const MainShell(),
-          ),
+          listenable: Listenable.merge([state, DeepLink.legal]),
+          builder: (context, _) => _app(context),
         ),
       );
+
+  Widget _app(BuildContext context) {
+    final legalDoc = legalById(DeepLink.legal.value ?? '');
+    appLinkHome = () => DeepLink.legal.value = null;
+    return MaterialApp(
+      title: appConfig.branding.appName,
+      debugShowCheckedModeBanner: false,
+      theme: buildTheme(),
+      locale: Locale(state.language),
+      supportedLocales: const [Locale('en'), Locale('te')],
+      localizationsDelegates: GlobalMaterialLocalizations.delegates,
+      home: legalDoc != null
+          ? LegalScreen(doc: legalDoc, standalone: true)
+          : state.user == null
+              ? const WelcomeScreen()
+              : !state.user!.emailVerified
+                  ? const VerifyEmailScreen()
+                  : const MainShell(),
+    );
+  }
 }

@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
-import '../../admin/file_pick.dart';
 import '../../config/config_service.dart';
 import '../../data/ap_data.dart';
 import '../../data/featured_polls.dart';
 import '../../data/poll_month.dart';
 import '../../data/poll_repository.dart';
+import '../../l10n/legal.dart';
 import '../../l10n/strings.dart';
 import '../../state/app_state.dart';
 import '../../theme.dart';
@@ -14,10 +15,10 @@ import '../../widgets/common.dart';
 import '../../widgets/painters.dart';
 import '../ap_map_screen.dart';
 import '../browse_screens.dart';
-import '../featured_poll_screen.dart';
-import '../home_screen.dart';
 import '../main_shell.dart';
+import '../legal_screens.dart';
 import '../my_constituency_screen.dart';
+import 'desktop_sections.dart';
 
 const _maxWidth = 1240.0;
 
@@ -67,23 +68,21 @@ class DesktopHome extends StatelessWidget {
         _Section(
           title: context.tr('featuredPolls'),
           subtitle: month.label(context.isTelugu),
-          child: LayoutBuilder(builder: (context, box) {
-            final count = featuredPolls.length + (home.showMonthlyVotes ? 1 : 0);
-            final cols = count == 4 || box.maxWidth <= 1000 ? 2 : 3;
-            final w = (box.maxWidth - (cols - 1) * 20) / cols;
-            return Wrap(spacing: 20, runSpacing: 20, children: [
-              if (home.showMonthlyVotes) SizedBox(width: w, child: const MonthlyVotesCard()),
-              for (final p in featuredPolls) SizedBox(width: w, child: FeaturedPollCard(poll: p)),
-            ]);
-          }),
+          child: DesktopFeatured(showMonthlyVotes: home.showMonthlyVotes),
         ),
       if (home.showTopSeats)
         _Section(
           title: context.tr('topSeats'),
           child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Expanded(child: _SeatColumn(title: context.tr('topMlaSeats'), ids: home.topMla, tab: ShellTab.mla)),
+            Expanded(
+              child: DesktopSeatColumn(
+                  title: context.tr('topMlaSeats'), icon: Icons.account_balance, ids: home.topMla, tab: ShellTab.mla),
+            ),
             const SizedBox(width: 24),
-            Expanded(child: _SeatColumn(title: context.tr('topMpSeats'), ids: home.topMp, tab: ShellTab.mp)),
+            Expanded(
+              child: DesktopSeatColumn(
+                  title: context.tr('topMpSeats'), icon: Icons.museum_outlined, ids: home.topMp, tab: ShellTab.mp),
+            ),
           ]),
         ),
       _Section(
@@ -367,110 +366,6 @@ class _Metric extends StatelessWidget {
       );
 }
 
-class _SeatColumn extends StatelessWidget {
-  const _SeatColumn({required this.title, required this.ids, required this.tab});
-
-  final String title;
-  final List<String> ids;
-  final int tab;
-
-  @override
-  Widget build(BuildContext context) {
-    final state = AppScope.of(context);
-    final seats = [
-      for (final id in ids)
-        if (ApData.mla.any((c) => c.id == id) || ApData.mp.any((c) => c.id == id)) state.snapshot(ApData.byId(id)),
-    ];
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: AppColors.border),
-        boxShadow: const [BoxShadow(color: Color(0x0D0F172A), blurRadius: 30, offset: Offset(0, 12))],
-      ),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(24, 20, 12, 8),
-          child: Row(children: [
-            Expanded(child: Text(title, style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w800))),
-            TextButton(
-              onPressed: () => ShellScope.maybeOf(context)?.go(tab),
-              child: Text('${context.tr('viewAll')} →'),
-            ),
-          ]),
-        ),
-        for (var i = 0; i < seats.length; i++) _SeatRow(rank: i + 1, snapshot: seats[i]),
-        const SizedBox(height: 10),
-      ]),
-    );
-  }
-}
-
-class _SeatRow extends StatelessWidget {
-  const _SeatRow({required this.rank, required this.snapshot});
-
-  final int rank;
-  final PollSnapshot snapshot;
-
-  @override
-  Widget build(BuildContext context) {
-    final te = context.isTelugu;
-    final c = snapshot.constituency;
-    final cands = snapshot.candidates;
-    final leader = cands[snapshot.leader];
-    final voted = AppScope.of(context).choiceIndex(c) != null;
-    return InkWell(
-      onTap: () => openConstituency(context, c),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-        decoration: const BoxDecoration(border: Border(top: BorderSide(color: AppColors.border))),
-        child: Row(children: [
-          SizedBox(
-            width: 28,
-            child: Text('$rank', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: AppColors.grey)),
-          ),
-          SizedBox(
-            width: 92,
-            height: 56,
-            child: Stack(children: [
-              CandidateAvatar(cands[0], size: 56),
-              Positioned(left: 36, child: CandidateAvatar(cands[1], size: 56)),
-            ]),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(c.name(te), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
-              const SizedBox(height: 2),
-              Text('${cands[0].name(te)} vs ${cands[1].name(te)}',
-                  maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AppColors.muted, fontSize: 13)),
-              const SizedBox(height: 8),
-              ShareBar(snapshot, height: 7),
-              const SizedBox(height: 6),
-              Text(
-                snapshot.hasVotes
-                    ? '${leader.party.shortName(te)} ${context.tr('leading')} ${(snapshot.share(snapshot.leader) * 100).toStringAsFixed(1)}% · '
-                        '${formatCompact(snapshot.total)} ${context.tr('votes')}'
-                    : context.tr('beFirst'),
-                style: TextStyle(
-                    color: snapshot.hasVotes ? leader.party.color : AppColors.muted, fontWeight: FontWeight.w700, fontSize: 12.5),
-              ),
-            ]),
-          ),
-          const SizedBox(width: 12),
-          voted
-              ? Icon(Icons.check_circle, color: AppColors.green)
-              : FilledButton(
-                  onPressed: () => openConstituency(context, c),
-                  style: FilledButton.styleFrom(minimumSize: const Size(84, 40)),
-                  child: Text(context.tr('vote')),
-                ),
-        ]),
-      ),
-    );
-  }
-}
-
 class _DistrictTile extends StatelessWidget {
   const _DistrictTile({required this.summary});
 
@@ -494,7 +389,9 @@ class _DistrictTile extends StatelessWidget {
             Text(summary.district.name(context.isTelugu), style: const TextStyle(fontWeight: FontWeight.w800)),
             const SizedBox(height: 4),
             Text(
-              [for (final g in seatGroups) if (t.seats[g]! > 0) '${groupLabel(context, g)} ${t.seats[g]}'].join(' · '),
+              t.total == 0
+                  ? context.tr('beFirst')
+                  : [for (final g in seatGroups) if (t.seats[g]! > 0) '${groupLabel(context, g)} ${t.seats[g]}'].join(' · '),
               style: const TextStyle(color: AppColors.muted, fontSize: 12.5),
             ),
           ]),
@@ -510,40 +407,72 @@ class _Footer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final b = appConfig.branding;
+    final te = context.isTelugu;
+    final shell = ShellScope.maybeOf(context);
+    const linkStyle = TextStyle(color: Color(0xFFCBD5E1), fontSize: 14);
+    const headStyle = TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 14, letterSpacing: 0.4);
+
+    Widget link(String label, VoidCallback onTap) => Padding(
+          padding: const EdgeInsets.only(bottom: 10),
+          child: InkWell(onTap: onTap, child: Text(label, style: linkStyle)),
+        );
+
+    Widget column(String title, List<Widget> links) => Expanded(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(title.toUpperCase(), style: headStyle),
+            const SizedBox(height: 16),
+            ...links,
+          ]),
+        );
+
     return Container(
       color: const Color(0xFF0B1424),
-      padding: const EdgeInsets.fromLTRB(32, 48, 32, 36),
+      padding: const EdgeInsets.fromLTRB(32, 56, 32, 32),
       child: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: _maxWidth),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14)),
-                child: const VoteWalaLogo(markSize: 44, horizontal: true),
+              Expanded(
+                flex: 2,
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14)),
+                    child: const VoteWalaLogo(markSize: 44, horizontal: true),
+                  ),
+                  const SizedBox(height: 18),
+                  SizedBox(
+                    width: 380,
+                    child: Text(context.tr('footerAbout'),
+                        style: const TextStyle(color: Color(0xFF94A3B8), height: 1.6, fontSize: 13.5)),
+                  ),
+                ]),
               ),
-              const Spacer(),
-              SizedBox(
-                width: 460,
-                child: Text(
-                  context.tr('termsBody'),
-                  style: const TextStyle(color: Color(0xFF94A3B8), height: 1.6, fontSize: 13),
-                ),
-              ),
+              column(context.tr('footerPlatform'), [
+                link(context.tr('mlaPollsShort'), () => shell?.go(ShellTab.mla)),
+                link(context.tr('mpPollsShort'), () => shell?.go(ShellTab.mp)),
+                link(context.tr('results'), () => shell?.go(ShellTab.results)),
+                link(context.tr('yourConstituency'), () => openMyConstituency(context)),
+              ]),
+              column(context.tr('footerLegal'), [
+                for (final id in ['privacy', 'terms', 'disclaimer', 'cookies'])
+                  link(legalById(id)!.title(te), () => openLegal(context, id)),
+              ]),
+              column(context.tr('footerHelp'), [
+                for (final id in ['guidelines', 'grievance'])
+                  link(legalById(id)!.title(te), () => openLegal(context, id)),
+                if (b.contactEmail != null) link(b.contactEmail!, () => launchUrl(Uri.parse('mailto:${b.contactEmail}'))),
+              ]),
             ]),
-            const SizedBox(height: 32),
+            const SizedBox(height: 36),
             const Divider(color: Color(0xFF1E293B)),
             const SizedBox(height: 16),
             Row(children: [
-              Text('© ${istNow().year} ${b.appName} · ${b.tagline(context.isTelugu)}',
+              Text('© ${istNow().year} ${b.appName}. ${context.tr('footerRights')}',
                   style: const TextStyle(color: Color(0xFF64748B))),
               const Spacer(),
-              TextButton.icon(
-                onPressed: openAdminConsole,
-                icon: const Icon(Icons.admin_panel_settings_outlined, size: 18, color: Color(0xFF64748B)),
-                label: const Text('Admin console', style: TextStyle(color: Color(0xFF64748B))),
-              ),
+              Text(b.tagline(te), style: const TextStyle(color: Color(0xFF64748B))),
             ]),
           ]),
         ),

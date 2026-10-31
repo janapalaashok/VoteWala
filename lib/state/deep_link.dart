@@ -17,7 +17,13 @@ class DeepLink {
   @visibleForTesting
   static void clear() => _pending = null;
 
+  /// Policy page opened from its web address (`#/legal/privacy`), shown
+  /// without signing in.
+  static final legal = ValueNotifier<String?>(null);
+
   static void parse(String fragment) {
+    final l = RegExp(r'^/legal/([a-z]+)$').firstMatch(fragment);
+    if (l != null) legal.value = l.group(1);
     final m = RegExp(r'^/(c|f)/([A-Za-z0-9-]+)$').firstMatch(fragment);
     if (m != null) _pending = '${m.group(1)}:${m.group(2)}';
   }

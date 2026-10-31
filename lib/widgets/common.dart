@@ -624,3 +624,7 @@ class ResultsDisclaimer extends StatelessWidget {
         ]),
       );
 }
+
+/// "1 vote" / "12,480 votes".
+String votesText(BuildContext context, int n) =>
+    n == 1 ? context.tr('oneVote') : context.tr('nVotes', {'n': formatIndian(n)});

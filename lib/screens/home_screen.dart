@@ -8,13 +8,13 @@ import '../data/poll_repository.dart';
 import '../l10n/strings.dart';
 import '../state/app_state.dart';
 import '../theme.dart';
-import '../utils.dart';
 import '../widgets/common.dart';
 import '../widgets/painters.dart';
 import 'ap_map_screen.dart';
 import 'browse_screens.dart';
 import 'constituency_detail_screen.dart';
 import 'featured_poll_screen.dart';
+import 'live_results_screen.dart';
 import 'main_shell.dart';
 import 'my_constituency_screen.dart';
 
@@ -408,14 +408,12 @@ class PollCard extends StatelessWidget {
             child: Text(
               snapshot.hasVotes
                   ? '${leader.name(te)} (${leader.party.shortName(te)}) ${context.tr('leading')} · '
-                      '${formatCompact(snapshot.total)} ${context.tr('votes')}'
+                      '${votesText(context, snapshot.total)}'
                   : context.tr('beFirst'),
               style: const TextStyle(fontSize: 12.5, color: AppColors.muted),
             ),
           ),
-          if (voted)
-            Icon(Icons.check_circle, color: AppColors.green, size: 22)
-          else if (!snapshot.closed && state.canVote(c))
+          if (!snapshot.closed && state.canVote(c))
             SizedBox(
               height: 34,
               child: FilledButton(
@@ -426,9 +424,29 @@ class PollCard extends StatelessWidget {
                   textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
                 ),
-                child: Text(context.tr('vote')),
+                child: Text(context.tr('voteNow')),
+              ),
+            )
+          else ...[
+            if (voted) ...[
+              Icon(Icons.check_circle, color: AppColors.green, size: 20),
+              const SizedBox(width: 6),
+            ],
+            SizedBox(
+              height: 34,
+              child: OutlinedButton(
+                onPressed: () => Navigator.of(context)
+                    .push(MaterialPageRoute<void>(builder: (_) => LiveResultsScreen(constituency: c))),
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size(0, 34),
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                  textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                ),
+                child: Text(context.tr('seeResults')),
               ),
             ),
+          ],
         ]),
       ]),
     );

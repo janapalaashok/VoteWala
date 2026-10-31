@@ -21,6 +21,13 @@ class BrandingPage extends StatelessWidget {
           DraftField(label: 'Tagline (English)', value: b.taglineEn, onChanged: (v) => set((b) => b.copyWith(taglineEn: v))),
           const SizedBox(height: 14),
           DraftField(label: 'Tagline (Telugu)', value: b.taglineTe, onChanged: (v) => set((b) => b.copyWith(taglineTe: v))),
+          const SizedBox(height: 14),
+          DraftField(
+            label: 'Contact / grievance email',
+            helper: 'Shown on the Privacy Policy, Terms and Grievance pages. Required by law for privacy requests.',
+            value: b.contactEmail,
+            onChanged: (v) => set((b) => b.copyWith(contactEmail: v)),
+          ),
         ]),
       ),
       AdminCard(

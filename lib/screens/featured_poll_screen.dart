@@ -45,7 +45,7 @@ class FeaturedPollCard extends StatelessWidget {
     final mine = state.featuredChoice(poll);
     final month = PollMonth.current();
     final subtitle = poll.hasMonthlyUpdates
-        ? '${month.label(te)}: ${context.tr('monthVotes', {'n': formatCompact(state.featuredVotesIn(poll, month).fold(0, (a, b) => a + b))})}'
+        ? '${month.label(te)}: ${votesText(context, state.featuredVotesIn(poll, month).fold(0, (a, b) => a + b))}'
         : poll.isOpen
             ? context.tr('daysLeft', {'n': '${timeUntil(poll.end).inDays + 1}'})
             : context.tr('closedOn', {'date': formatDate(poll.end.subtract(const Duration(days: 1)))});
@@ -55,7 +55,7 @@ class FeaturedPollCard extends StatelessWidget {
           .push(MaterialPageRoute<void>(builder: (_) => FeaturedPollScreen(poll: poll))),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
-          _KindIcon(poll.kind),
+          FeaturedKindIcon(poll.kind),
           const SizedBox(width: 10),
           Expanded(
             child: Text(poll.title(te), style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
@@ -87,18 +87,23 @@ class FeaturedPollCard extends StatelessWidget {
         const SizedBox(height: 2),
         Row(children: [
           Expanded(child: Text(subtitle, style: const TextStyle(color: AppColors.muted, fontSize: 12))),
-          if (mine != null)
-            Icon(Icons.check_circle, color: AppColors.green, size: 20)
-          else if (poll.isOpen)
-            Text(context.tr('voteNow'), style: TextStyle(color: AppColors.orange, fontWeight: FontWeight.w700)),
+          if (mine == null && poll.isOpen)
+            Text(context.tr('voteNow'), style: TextStyle(color: AppColors.orange, fontWeight: FontWeight.w700))
+          else ...[
+            if (mine != null) ...[
+              Icon(Icons.check_circle, color: AppColors.green, size: 18),
+              const SizedBox(width: 4),
+            ],
+            Text(context.tr('seeResults'), style: TextStyle(color: AppColors.blue, fontWeight: FontWeight.w700)),
+          ],
         ]),
       ]),
     );
   }
 }
 
-class _KindIcon extends StatelessWidget {
-  const _KindIcon(this.kind);
+class FeaturedKindIcon extends StatelessWidget {
+  const FeaturedKindIcon(this.kind, {super.key});
 
   final FeaturedKind kind;
 
@@ -117,8 +122,8 @@ class _KindIcon extends StatelessWidget {
   }
 }
 
-class _OptionAvatar extends StatelessWidget {
-  const _OptionAvatar(this.poll, this.index, {this.size = 44});
+class FeaturedOptionAvatar extends StatelessWidget {
+  const FeaturedOptionAvatar(this.poll, this.index, {super.key, this.size = 44});
 
   final FeaturedPoll poll;
   final int index;
@@ -245,7 +250,7 @@ class _FeaturedPollScreenState extends State<FeaturedPollScreen> {
                     borderColor: _selected == i ? AppColors.orange : null,
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                     child: Row(children: [
-                      _OptionAvatar(poll, i),
+                      FeaturedOptionAvatar(poll, i),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -289,7 +294,7 @@ class _FeaturedPollScreenState extends State<FeaturedPollScreen> {
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 8),
                   child: Row(children: [
-                    _OptionAvatar(poll, i, size: 40),
+                    FeaturedOptionAvatar(poll, i, size: 40),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

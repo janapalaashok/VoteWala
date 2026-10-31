@@ -7,7 +7,8 @@ import '../state/app_state.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
 import '../widgets/painters.dart';
-import 'info_screens.dart';
+import '../l10n/legal.dart';
+import 'legal_screens.dart';
 import 'main_shell.dart';
 
 void enterApp(BuildContext context, AppUser user) {
@@ -165,7 +166,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     textAlign: TextAlign.center, style: const TextStyle(color: AppColors.muted, fontSize: 12.5)),
                 TextButton(
                   onPressed: () => Navigator.of(context).push(
-                      MaterialPageRoute<void>(builder: (_) => const InfoScreen(titleKey: 'terms', bodyKey: 'termsBody'))),
+                      MaterialPageRoute<void>(builder: (_) => LegalScreen(doc: legalById('terms')!))),
                   child: Text(context.tr('termsPrivacy'), style: const TextStyle(color: AppColors.blue)),
                 ),
                 const SizedBox(

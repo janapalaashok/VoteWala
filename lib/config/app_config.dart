@@ -15,6 +15,7 @@ class BrandingConfig {
     this.logoUrl,
     this.markUrl,
     this.appIconUrl,
+    this.contactEmail,
   });
 
   final String appName;
@@ -30,6 +31,9 @@ class BrandingConfig {
   /// Used by the next app build (installed apps cannot change their icon).
   final String? appIconUrl;
 
+  /// Shown on the legal pages for privacy requests and grievances.
+  final String? contactEmail;
+
   String tagline(bool te) => te ? taglineTe : taglineEn;
 
   BrandingConfig copyWith({
@@ -41,6 +45,7 @@ class BrandingConfig {
     String? logoUrl,
     String? markUrl,
     String? appIconUrl,
+    String? contactEmail,
     bool clearLogo = false,
     bool clearMark = false,
     bool clearAppIcon = false,
@@ -54,6 +59,7 @@ class BrandingConfig {
         logoUrl: clearLogo ? null : logoUrl ?? this.logoUrl,
         markUrl: clearMark ? null : markUrl ?? this.markUrl,
         appIconUrl: clearAppIcon ? null : appIconUrl ?? this.appIconUrl,
+        contactEmail: contactEmail == null ? this.contactEmail : (contactEmail.isEmpty ? null : contactEmail),
       );
 
   Map<String, dynamic> toJson() => {
@@ -65,6 +71,7 @@ class BrandingConfig {
         if (logoUrl != null) 'logoUrl': logoUrl,
         if (markUrl != null) 'markUrl': markUrl,
         if (appIconUrl != null) 'appIconUrl': appIconUrl,
+        if (contactEmail != null) 'contactEmail': contactEmail,
       };
 
   factory BrandingConfig.fromJson(Map<String, dynamic> j) {
@@ -78,6 +85,7 @@ class BrandingConfig {
       logoUrl: _str(j['logoUrl']),
       markUrl: _str(j['markUrl']),
       appIconUrl: _str(j['appIconUrl']),
+      contactEmail: _str(j['contactEmail']),
     );
   }
 }
