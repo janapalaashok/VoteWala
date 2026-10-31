@@ -19,56 +19,68 @@ class WelcomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final wide = MediaQuery.sizeOf(context).width >= 900;
-    const header = Row(children: [VoteWalaLogo(markSize: 40, horizontal: true), Spacer(), _LanguageToggle()]);
+    // Large centred logo; the language switch sits in the page corner.
+    const header = Center(child: VoteWalaLogo(markSize: 104));
     const title = Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           'Andhra Pradesh Political Opinion Polls',
-          style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, height: 1.25),
+          textAlign: TextAlign.center,
+          style: TextStyle(fontSize: 19, fontWeight: FontWeight.w800, height: 1.25),
         ),
         SizedBox(height: 2),
-        Text('ఆంధ్రప్రదేశ్ రాజకీయ అభిప్రాయ సేకరణ', style: TextStyle(color: AppColors.muted)),
+        Text(
+          'ఆంధ్రప్రదేశ్ రాజకీయ అభిప్రాయ సేకరణ',
+          textAlign: TextAlign.center,
+          style: TextStyle(color: AppColors.muted),
+        ),
       ],
     );
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
-        child: wide
-            // Desktop website: Andhra Pradesh collage beside the form.
-            ? Row(
-                children: [
-                  const Expanded(flex: 6, child: _Collage()),
-                  Expanded(
-                    flex: 5,
-                    child: Center(
-                      child: SingleChildScrollView(
-                        padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 32),
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: wide
+                  // Desktop website: Andhra Pradesh collage beside the form.
+                  ? Row(
+                      children: [
+                        const Expanded(flex: 6, child: _Collage()),
+                        Expanded(
+                          flex: 5,
+                          child: Center(
+                            child: SingleChildScrollView(
+                              padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 32),
+                              child: ConstrainedBox(
+                                constraints: const BoxConstraints(maxWidth: 420),
+                                child: const Column(
+                                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                                  children: [header, SizedBox(height: 20), title, SizedBox(height: 24), AuthForm()],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    )
+                  // Mobile website and apps: no image, just the form.
+                  : SingleChildScrollView(
+                      padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+                      child: Center(
                         child: ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 420),
+                          constraints: const BoxConstraints(maxWidth: 460),
                           child: const Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [header, SizedBox(height: 32), title, SizedBox(height: 24), AuthForm()],
+                            children: [header, SizedBox(height: 20), title, SizedBox(height: 24), AuthForm()],
                           ),
                         ),
                       ),
                     ),
-                  ),
-                ],
-              )
-            // Mobile website and apps: no image, just the form.
-            : SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
-                child: Center(
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 460),
-                    child: const Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [header, SizedBox(height: 36), title, SizedBox(height: 24), AuthForm()],
-                    ),
-                  ),
-                ),
-              ),
+            ),
+            const Positioned(top: 8, right: 8, child: _LanguageToggle()),
+          ],
+        ),
       ),
     );
   }
@@ -137,19 +149,37 @@ class _LanguageToggle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final state = AppScope.of(context);
-    return SegmentedButton<String>(
-      showSelectedIcon: false,
-      style: SegmentedButton.styleFrom(
-        visualDensity: VisualDensity.compact,
-        selectedBackgroundColor: AppColors.orange,
-        selectedForegroundColor: Colors.white,
+    Widget option(String lang, String label) {
+      final selected = state.language == lang;
+      return InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: () => state.setLanguage(lang),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          decoration: BoxDecoration(
+            color: selected ? AppColors.orange : Colors.transparent,
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: selected ? Colors.white : AppColors.muted,
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(2),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border),
       ),
-      segments: const [
-        ButtonSegment(value: 'en', label: Text('English')),
-        ButtonSegment(value: 'te', label: Text('తెలుగు')),
-      ],
-      selected: {state.language},
-      onSelectionChanged: (s) => state.setLanguage(s.first),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [option('en', 'EN'), option('te', 'తెలుగు')]),
     );
   }
 }
