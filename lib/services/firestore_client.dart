@@ -58,6 +58,8 @@ abstract class DocStore {
 
   /// Applies [writes] atomically.
   Future<void> commit(List<Write> writes);
+
+  Future<void> delete(String path);
 }
 
 /// Firestore over its REST API. Requests carry the signed-in user's ID token,
@@ -155,6 +157,12 @@ class FirestoreClient implements DocStore {
     if (r.statusCode != 200) throw _error(r);
   }
 
+  @override
+  Future<void> delete(String path) async {
+    final r = await _send((h) => _http.delete(Uri.parse('$_root/$path?key=${settings.apiKey}'), headers: h));
+    if (r.statusCode != 200) throw _error(r);
+  }
+
   Map<String, Object?> _encodeWrite(Write w) => {
         'update': {
           'name': '$_name/${w.path}',
@@ -230,6 +238,9 @@ class MemoryStore implements DocStore {
         if (e.key.startsWith('$collection/') && e.key.split('/').length == depth) e.key.split('/').last: {...e.value},
     };
   }
+
+  @override
+  Future<void> delete(String path) async => docs.remove(path);
 
   @override
   Future<void> commit(List<Write> writes) async {

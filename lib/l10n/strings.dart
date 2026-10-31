@@ -354,6 +354,7 @@ const _en = <String, String>{
   'votesLabel': "Votes",
   'savedShort': "Saved",
   'account': "Account",
+  'accountBlocked': "This account has been blocked from voting for breaking the community guidelines. If you think this is a mistake, write to contact@votewala.in.",
 };
 
 const _te = <String, String>{
@@ -695,4 +696,5 @@ const _te = <String, String>{
   'votesLabel': "ఓట్లు",
   'savedShort': "సేవ్",
   'account': "ఖాతా",
+  'accountBlocked': "కమ్యూనిటీ మార్గదర్శకాలు ఉల్లంఘించినందుకు ఈ ఖాతా ఓటింగ్ నుండి నిలిపివేయబడింది. పొరపాటు అనిపిస్తే contact@votewala.in కు రాయండి.",
 };

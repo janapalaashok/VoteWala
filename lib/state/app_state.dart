@@ -126,6 +126,10 @@ class AppState extends ChangeNotifier {
 
   /// True once the voter's previous votes are known (voting waits for it).
   bool get recordLoaded => _recordLoaded;
+
+  /// An admin blocked this account from voting.
+  bool get blocked => _blocked;
+  bool _blocked = false;
   int get voteCount => _record.voteCount;
   Set<String> get earnedBadges => _record.badges;
 
@@ -142,6 +146,7 @@ class AppState extends ChangeNotifier {
   Future<void> signIn(AppUser user) async {
     _user = user;
     _record = VoterRecord();
+    _blocked = false;
     _recordLoaded = false;
     notifyListeners();
     await reloadRecord();
@@ -178,10 +183,16 @@ class AppState extends ChangeNotifier {
     final u = _user;
     if (u == null) return;
     try {
-      final record = await votes.load(u.uid, _myPollIds);
+      final (record, blocked) = await (votes.load(u.uid, _myPollIds), votes.isBlocked(u.uid)).wait;
       if (_user?.uid != u.uid) return;
       _record = record;
+      _blocked = blocked;
       _recordLoaded = true;
+      if (u.emailVerified) {
+        unawaited(votes
+            .saveProfile(uid: u.uid, email: u.email ?? '', name: u.name, provider: u.provider)
+            .catchError((Object e) => debugPrint('Profile save failed: $e')));
+      }
       notifyListeners();
       // Catch up on badges reached while a badge write failed.
       final missing = _badgesReached(record.voteCount);
@@ -200,6 +211,7 @@ class AppState extends ChangeNotifier {
 
   void _checkCanVote() {
     if (_user == null) throw const VoteException(VoteError.notSignedIn);
+    if (_blocked) throw const VoteException(VoteError.blocked);
     if (!_recordLoaded) throw const VoteException(VoteError.network, 'record not loaded');
   }
 

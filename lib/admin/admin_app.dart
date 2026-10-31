@@ -14,6 +14,7 @@ import 'pages/civic_settings_page.dart';
 import 'pages/featured_page.dart';
 import 'pages/issues_page.dart';
 import 'pages/review_pages.dart';
+import 'pages/team_pages.dart';
 import 'pages/home_page.dart';
 import 'pages/parties_page.dart';
 import 'pages/profile_page.dart';
@@ -194,6 +195,9 @@ const _nav = [
   _NavItem(Icons.gavel_outlined, 'Grievances', GrievancesPage()),
   _NavItem(Icons.insights_outlined, 'Analytics', AnalyticsPage()),
   _NavItem(Icons.tune_outlined, 'Issues, badges & sharing', CivicSettingsPage()),
+  _NavItem(Icons.people_alt_outlined, 'Users', UsersPage()),
+  _NavItem(Icons.article_outlined, 'Legal pages', LegalPagesPage()),
+  _NavItem(Icons.admin_panel_settings_outlined, 'Admins', AdminsPage()),
   _NavItem(Icons.cloud_upload_outlined, 'Publish & backup', PublishPage()),
   _NavItem(Icons.account_circle_outlined, 'My profile', AdminProfilePage()),
 ];

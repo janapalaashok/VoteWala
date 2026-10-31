@@ -44,6 +44,7 @@ class HomeScreen extends StatelessWidget {
               child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
                 const _TopBar(),
                 const SizedBox(height: 12),
+                if (AppScope.of(context).blocked) const BlockedBanner(),
                 _Hero(onSearch: () => push(const SearchScreen())),
                 const SizedBox(height: 16),
                 Row(children: [

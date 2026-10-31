@@ -13,6 +13,7 @@ import {
   serverTimestamp,
   setDoc,
   updateDoc,
+  deleteDoc,
   writeBatch,
 } from 'firebase/firestore';
 
@@ -247,6 +248,35 @@ describe('admin data', () => {
     await assertFails(updateDoc(doc(db('boss'), 'admins/boss'), { role: 'superuser' }));
     await assertFails(updateDoc(doc(db('boss'), 'admins/boss'), { mustChangePassword: true }));
     await assertFails(setDoc(doc(db('alice'), 'admins/alice'), { role: 'owner' }));
+  });
+
+  test('owners add and remove admins; admins cannot', async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'admins/boss'), { role: 'owner', username: 'admin' });
+      await setDoc(doc(ctx.firestore(), 'admins/helper'), { role: 'admin', username: 'helper' });
+    });
+    const newAdmin = { role: 'admin', username: 'ravi', displayName: 'Ravi', mustChangePassword: true };
+    await assertSucceeds(setDoc(doc(db('boss'), 'admins/ravi'), newAdmin));
+    await assertFails(setDoc(doc(db('boss'), 'admins/sita'), { ...newAdmin, role: 'owner' }));
+    await assertFails(setDoc(doc(db('helper'), 'admins/sita'), newAdmin));
+    await assertFails(deleteDoc(doc(db('helper'), 'admins/ravi')));
+    await assertSucceeds(deleteDoc(doc(db('boss'), 'admins/ravi')));
+    await assertFails(deleteDoc(doc(db('boss'), 'admins/boss')));
+  });
+
+  test('blocked voters cannot vote; profiles are private to admins', async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'admins/boss'), { role: 'owner' });
+    });
+    await assertSucceeds(setDoc(doc(db('boss'), 'blocked/mallory'), { reason: 'fake accounts' }));
+    await assertFails(setDoc(doc(db('alice'), 'blocked/mallory'), { reason: 'x' }));
+    await assertFails(voteBatch(db('mallory'), 'mallory', `mla-${M}`, 'mla-37', 0).commit());
+    await assertSucceeds(voteBatch(db('alice'), 'alice', `mla-${M}`, 'mla-37', 0).commit());
+    const me = env.authenticatedContext('alice', { email: 'a@x.com', email_verified: true }).firestore();
+    await assertSucceeds(setDoc(doc(me, 'profiles/alice'), { email: 'a@x.com', name: 'A', provider: 'google', lastSeen: serverTimestamp() }));
+    await assertFails(setDoc(doc(me, 'profiles/alice'), { email: 'other@x.com', name: 'A', provider: 'google', lastSeen: serverTimestamp() }));
+    await assertFails(getDoc(doc(db('bob'), 'profiles/alice')));
+    await assertSucceeds(getDoc(doc(db('boss'), 'profiles/alice')));
   });
 
   test('only admins change settings and grievances', async () => {

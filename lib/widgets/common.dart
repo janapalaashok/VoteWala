@@ -628,3 +628,27 @@ class ResultsDisclaimer extends StatelessWidget {
 /// "1 vote" / "12,480 votes".
 String votesText(BuildContext context, int n) =>
     n == 1 ? context.tr('oneVote') : context.tr('nVotes', {'n': formatIndian(n)});
+
+/// Shown when an admin has blocked the account from voting.
+class BlockedBanner extends StatelessWidget {
+  const BlockedBanner({super.key});
+
+  @override
+  Widget build(BuildContext context) => Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFEE2E2),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: const Color(0xFFFCA5A5)),
+        ),
+        child: Row(children: [
+          const Icon(Icons.block, color: AppColors.red),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(context.tr('accountBlocked'),
+                style: const TextStyle(color: Color(0xFF991B1B), fontWeight: FontWeight.w600, height: 1.4)),
+          ),
+        ]),
+      );
+}

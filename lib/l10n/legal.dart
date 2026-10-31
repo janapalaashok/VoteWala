@@ -1,7 +1,9 @@
+import '../config/config_service.dart';
+
 /// VoteWala's public policies. Each has a web address: `#/legal/<id>`.
 ///
 /// The English text is the governing version; each page starts with a short
-/// Telugu summary.
+/// Telugu summary. Admins can edit them (admin panel → Legal pages).
 class LegalDoc {
   const LegalDoc(this.id, this.titleEn, this.titleTe, this.summaryTe, this.sections);
 
@@ -13,11 +15,35 @@ class LegalDoc {
   final List<(String, String)> sections;
 
   String title(bool te) => te ? titleTe : titleEn;
+
+  LegalDoc copyWith({String? titleEn, String? titleTe, String? summaryTe, List<(String, String)>? sections}) =>
+      LegalDoc(id, titleEn ?? this.titleEn, titleTe ?? this.titleTe, summaryTe ?? this.summaryTe, sections ?? this.sections);
+
+  Map<String, dynamic> toJson() => {
+        'titleEn': titleEn,
+        'titleTe': titleTe,
+        'summaryTe': summaryTe,
+        'sections': [for (final (h, b) in sections) {'h': h, 'b': b}],
+      };
+
+  factory LegalDoc.fromJson(String id, Map<String, dynamic> j, LegalDoc fallback) => LegalDoc(
+        id,
+        j['titleEn'] as String? ?? fallback.titleEn,
+        j['titleTe'] as String? ?? fallback.titleTe,
+        j['summaryTe'] as String? ?? fallback.summaryTe,
+        j['sections'] is List
+            ? [
+                for (final s in j['sections'] as List)
+                  if (s is Map) ('${s['h'] ?? ''}', '${s['b'] ?? ''}'),
+              ]
+            : fallback.sections,
+      );
 }
 
 const legalUpdated = '31 October 2026';
 
-const legalDocs = [
+/// Built-in texts; the admin panel can replace any of them.
+const defaultLegalDocs = [
   LegalDoc(
     'privacy',
     'Privacy Policy',
@@ -53,8 +79,9 @@ const legalDocs = [
               'on.'),
       ('Who processes the data',
           'Data is stored and processed on Google Cloud / Firebase (Google LLC and its affiliates) acting as our '
-              'processor. VoteWala administrators can see account counts, totals and submitted photos; they cannot see '
-              'how an individual voted. We disclose data to authorities only when Indian law requires it.'),
+              'processor. VoteWala administrators can see your account email and name, how many votes you have cast, '
+              'totals and submitted photos, so that they can handle abuse; they cannot see how an individual voted. '
+              'Accounts that break the Community Guidelines can be blocked from voting. We disclose data to authorities only when Indian law requires it.'),
       ('How long we keep it',
           'Account data is kept while your account exists. Ballots are kept to preserve the integrity of published '
               'results; if you delete your account, your ballots are disconnected from your identity. Rejected photos are '
@@ -200,5 +227,8 @@ const legalDocs = [
     ],
   ),
 ];
+
+/// The published policies: admin edits over the built-in texts.
+List<LegalDoc> get legalDocs => [for (final d in defaultLegalDocs) appConfig.legal[d.id] ?? d];
 
 LegalDoc? legalById(String id) => legalDocs.where((d) => d.id == id).firstOrNull;

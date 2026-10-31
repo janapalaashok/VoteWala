@@ -21,7 +21,7 @@ abstract final class PollIds {
 }
 
 /// Why a vote was not recorded.
-enum VoteError { notSignedIn, alreadyVoted, closed, rejected, network }
+enum VoteError { notSignedIn, alreadyVoted, closed, rejected, network, blocked }
 
 class VoteException implements Exception {
   const VoteException(this.error, [this.detail = '']);
@@ -36,6 +36,7 @@ class VoteException implements Exception {
         VoteError.closed => 'pollClosedMsg',
         VoteError.rejected => 'voteRejected',
         VoteError.network => 'networkError',
+        VoteError.blocked => 'accountBlocked',
       };
 
   @override
@@ -262,6 +263,19 @@ class VoteService {
       }
     }
   }
+
+  /// Keeps the voter's account details for admins (Users page).
+  Future<void> saveProfile({required String uid, required String email, required String name, required String provider}) =>
+      store.commit([
+        Write.merge('profiles/$uid', {
+          'email': email,
+          'name': name.length > 100 ? name.substring(0, 100) : name,
+          'provider': provider,
+        }, const {'lastSeen': FieldTransform.serverTime()}),
+      ]);
+
+  /// True when an admin blocked this account from voting.
+  Future<bool> isBlocked(String uid) async => await store.get('blocked/$uid') != null;
 
   /// Awards badges reached earlier but not stored (e.g. after a lost connection).
   Future<void> awardBadges(String uid, List<String> badges) async {

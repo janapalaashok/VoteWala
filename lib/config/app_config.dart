@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../data/ap_data.dart';
 import '../data/civic.dart';
+import '../l10n/legal.dart';
 import '../data/featured_polls.dart';
 
 /// Brand settings an admin can change.
@@ -215,6 +216,7 @@ class AppConfig {
     required this.featured,
     required this.home,
     this.civic = const CivicConfig(),
+    this.legal = const {},
     this.updatedAt,
     this.updatedBy,
   });
@@ -235,6 +237,9 @@ class AppConfig {
   final List<FeaturedPoll> featured;
   final HomeConfig home;
   final CivicConfig civic;
+
+  /// Edited policy pages by id (see l10n/legal.dart).
+  final Map<String, LegalDoc> legal;
   final DateTime? updatedAt;
   final String? updatedBy;
 
@@ -246,6 +251,7 @@ class AppConfig {
     List<FeaturedPoll>? featured,
     HomeConfig? home,
     CivicConfig? civic,
+    Map<String, LegalDoc>? legal,
     DateTime? updatedAt,
     String? updatedBy,
   }) =>
@@ -257,6 +263,7 @@ class AppConfig {
         featured: featured ?? this.featured,
         home: home ?? this.home,
         civic: civic ?? this.civic,
+        legal: legal ?? this.legal,
         updatedAt: updatedAt ?? this.updatedAt,
         updatedBy: updatedBy ?? this.updatedBy,
       );
@@ -276,6 +283,7 @@ class AppConfig {
         'featured': [for (final f in featured) f.toJson()],
         'home': home.toJson(),
         'civic': civic.toJson(),
+        'legal': {for (final e in legal.entries) e.key: e.value.toJson()},
         if (updatedAt != null) 'updatedAt': updatedAt!.toIso8601String(),
         if (updatedBy != null) 'updatedBy': updatedBy,
       };
@@ -305,6 +313,11 @@ class AppConfig {
           : d.featured,
       home: j['home'] is Map ? HomeConfig.fromJson(map(j['home'])) : d.home,
       civic: j['civic'] is Map ? CivicConfig.fromJson(map(j['civic'])) : d.civic,
+      legal: {
+        for (final e in map(j['legal']).entries)
+          if (defaultLegalDocs.where((x) => x.id == e.key).firstOrNull case final base?)
+            e.key: LegalDoc.fromJson(e.key, map(e.value), base),
+      },
       updatedAt: DateTime.tryParse(j['updatedAt'] as String? ?? ''),
       updatedBy: _str(j['updatedBy']),
     );

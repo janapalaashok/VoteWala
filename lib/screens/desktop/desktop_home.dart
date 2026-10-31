@@ -38,6 +38,7 @@ class DesktopHome extends StatelessWidget {
     final votes = mlaTally.votes + SeatTally(mp).votes;
 
     return ListView(children: [
+      if (state.blocked) const _Section(top: 20, child: BlockedBanner()),
       _Section(
         top: 28,
         child: _Hero(tally: mlaTally, month: month),

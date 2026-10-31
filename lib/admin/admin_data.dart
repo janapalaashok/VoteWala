@@ -79,6 +79,51 @@ class AdminData {
 
   Future<void> saveGrievance(Grievance g) => db.commit([Write.merge('grievances/${g.id}', g.toFields())]);
 
+  // ---- Admin team (owners add and remove admins) ----
+
+  Future<Map<String, Map<String, Object?>>> admins() => db.list('admins');
+
+  /// Creates a sign-in account for [username] and adds it to the team. The
+  /// new admin must change [tempPassword] on the first sign-in.
+  Future<void> createAdmin({required String username, required String displayName, required String tempPassword}) async {
+    final r = await _http.post(
+      Uri.parse('https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${settings.apiKey}'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'email': FirebaseRest.loginEmail(username), 'password': tempPassword, 'returnSecureToken': false}),
+    );
+    final body = jsonDecode(r.body) as Map<String, dynamic>;
+    if (r.statusCode != 200) {
+      final code = (body['error'] as Map?)?['message'] as String? ?? 'SIGN_UP_FAILED';
+      throw FirebaseException(switch (code) {
+        'EMAIL_EXISTS' => 'That username is already taken.',
+        _ when code.startsWith('WEAK_PASSWORD') => 'Use at least 6 characters for the password.',
+        _ => code,
+      });
+    }
+    await db.commit([
+      Write.create('admins/${body['localId']}', {
+        'role': 'admin',
+        'username': FirebaseRest.usernameOf(FirebaseRest.loginEmail(username)),
+        'displayName': displayName,
+        'mustChangePassword': true,
+      }),
+    ]);
+  }
+
+  /// Removes admin access (the sign-in account itself stays, without rights).
+  Future<void> removeAdmin(String uid) => db.delete('admins/$uid');
+
+  // ---- Voters ----
+
+  Future<Map<String, Map<String, Object?>>> profiles() => db.list('profiles');
+  Future<Map<String, Map<String, Object?>>> voteCounts() => db.list('users');
+  Future<Map<String, Map<String, Object?>>> blocked() => db.list('blocked');
+
+  Future<void> block(String uid, String reason) =>
+      db.commit([Write.merge('blocked/$uid', {'reason': reason}, const {'at': FieldTransform.serverTime()})]);
+
+  Future<void> unblock(String uid) => db.delete('blocked/$uid');
+
   Future<Map<String, Object?>> setting(String doc) async => await db.get('settings/$doc') ?? {};
 
   Future<void> saveSetting(String doc, Map<String, Object?> fields) => db.commit([Write.merge('settings/$doc', fields)]);

@@ -32,13 +32,19 @@ service cloud.firestore {
 
     // Voters: Google accounts and email accounts with a verified address
     // (or phone sign-in). Unverified email accounts can read but not vote.
+    // Blocked accounts (admin panel → Users) cannot vote.
     function voter() {
       return signedIn()
-        && (request.auth.token.email_verified == true || request.auth.token.firebase.sign_in_provider == 'phone');
+        && (request.auth.token.email_verified == true || request.auth.token.firebase.sign_in_provider == 'phone')
+        && !exists(/databases/$(database)/documents/blocked/$(request.auth.uid));
     }
 
     function isAdmin() {
       return signedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    function isOwner() {
+      return isAdmin() && get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.role == 'owner';
     }
 
     function doc(p) {
@@ -317,16 +323,37 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
-    // Admin list: created by tools/create_admin.py or the Firebase console.
-    // An admin may update only their own name, username and the
-    // "must change password" flag (cleared after the first sign-in).
+    // Admin team. The first owner comes from tools/create_admin.py; owners
+    // add or remove admins in the admin panel. Everyone may update only
+    // their own name, username and the "must change password" flag
+    // (cleared after the first sign-in).
     match /admins/{uid} {
-      allow read: if signedIn() && request.auth.uid == uid;
+      allow read: if isAdmin() || (signedIn() && request.auth.uid == uid);
       allow update: if isAdmin() && request.auth.uid == uid
         && request.resource.data.diff(resource.data).affectedKeys()
              .hasOnly(['displayName', 'username', 'mustChangePassword'])
         && request.resource.data.get('mustChangePassword', false) == false;
-      allow create, delete: if false;
+      allow create: if isOwner()
+        && request.resource.data.keys().hasOnly(['role', 'username', 'displayName', 'mustChangePassword'])
+        && request.resource.data.role == 'admin'
+        && request.resource.data.mustChangePassword == true;
+      allow delete: if isOwner() && request.auth.uid != uid;
+    }
+
+    // Voter's account details, for admins handling abuse (Users page).
+    match /profiles/{uid} {
+      allow read: if isAdmin() || (signedIn() && request.auth.uid == uid);
+      allow create, update: if signedIn() && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['email', 'name', 'provider', 'lastSeen'])
+        && request.resource.data.email == request.auth.token.get('email', '')
+        && request.resource.data.name is string && request.resource.data.name.size() <= 100
+        && request.resource.data.lastSeen == request.time;
+      allow delete: if false;
+    }
+
+    match /blocked/{uid} {
+      allow read: if isAdmin() || (signedIn() && request.auth.uid == uid);
+      allow write: if isAdmin();
     }
   }
 }
