@@ -345,6 +345,15 @@ const _en = <String, String>{
   'noClosedPolls': "No polls have closed yet.",
   'pastMonthResults': "Earlier months' MLA & MP results",
   'pastMonthResultsSub': "Choose a month (e.g. {month}) on the Results page",
+  'constituenciesWord': "constituencies",
+  'allDistricts': "All districts",
+  'resultsSub': "Live opinion of VoteWala users",
+  'constituenciesWithVotes': "Constituencies with votes",
+  'constituencyResults': "Constituency results",
+  'shareCol': "Share",
+  'votesLabel': "Votes",
+  'savedShort': "Saved",
+  'account': "Account",
 };
 
 const _te = <String, String>{
@@ -677,4 +686,13 @@ const _te = <String, String>{
   'noClosedPolls': "ఇంకా ఏ పోల్ ముగియలేదు.",
   'pastMonthResults': "గత నెలల MLA & MP ఫలితాలు",
   'pastMonthResultsSub': "ఫలితాల పేజీలో నెల ఎంచుకోండి (ఉదా. {month})",
+  'constituenciesWord': "నియోజకవర్గాలు",
+  'allDistricts': "అన్ని జిల్లాలు",
+  'resultsSub': "VoteWala వినియోగదారుల ప్రత్యక్ష అభిప్రాయం",
+  'constituenciesWithVotes': "ఓట్లు వచ్చిన నియోజకవర్గాలు",
+  'constituencyResults': "నియోజకవర్గాల ఫలితాలు",
+  'shareCol': "శాతం",
+  'votesLabel': "ఓట్లు",
+  'savedShort': "సేవ్",
+  'account': "ఖాతా",
 };

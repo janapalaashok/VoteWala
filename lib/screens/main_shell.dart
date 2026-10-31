@@ -7,6 +7,7 @@ import '../state/deep_link.dart';
 import '../widgets/common.dart';
 import 'constituency_list_screen.dart';
 import 'desktop/desktop_home.dart';
+import 'desktop/desktop_pages.dart';
 import 'desktop/desktop_shell.dart';
 import 'home_screen.dart';
 import 'profile_screen.dart';
@@ -75,7 +76,13 @@ class _MainShellState extends State<MainShell> {
         child: DesktopShell(
           index: _index,
           onSelect: (i) => setState(() => _index = i),
-          body: IndexedStack(index: _index, children: [const DesktopHome(), ..._pages.skip(1)]),
+          body: IndexedStack(index: _index, children: const [
+            DesktopHome(),
+            DesktopConstituencies(type: ElectionType.mla),
+            DesktopConstituencies(type: ElectionType.mp),
+            DesktopResults(),
+            DesktopProfile(),
+          ]),
         ),
       );
     }

@@ -16,7 +16,7 @@ class ProfileScreen extends StatelessWidget {
   void _push(BuildContext context, Widget page) =>
       Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => page));
 
-  Future<void> _chooseLanguage(BuildContext context) async {
+  static Future<void> chooseLanguage(BuildContext context) async {
     final state = AppScope.read(context);
     await showModalBottomSheet<void>(
       context: context,
@@ -36,7 +36,7 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  Future<void> _signOut(BuildContext context) async {
+  static Future<void> confirmSignOut(BuildContext context) async {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -56,7 +56,7 @@ class ProfileScreen extends StatelessWidget {
   }
 
   /// Lets a Google user also sign in with email + password.
-  Future<void> _setPassword(BuildContext context) async {
+  static Future<void> setPasswordFlow(BuildContext context) async {
     final password = TextEditingController();
     final confirm = TextEditingController();
     final messenger = ScaffoldMessenger.of(context);
@@ -186,7 +186,7 @@ class ProfileScreen extends StatelessWidget {
             const Padding(padding: EdgeInsets.fromLTRB(16, 0, 16, 12), child: AchievementsStrip()),
             const Divider(),
             if (user != null && user.email != null && !user.hasPassword && user.provider == 'google')
-              item(Icons.password, context.tr('setPassword'), () => _setPassword(context)),
+              item(Icons.password, context.tr('setPassword'), () => setPasswordFlow(context)),
             item(Icons.how_to_vote_outlined, context.tr('myParticipation'),
                 () => _push(context, const MyParticipationScreen()),
                 trailing: '${state.voteHistory.length}'),
@@ -195,7 +195,7 @@ class ProfileScreen extends StatelessWidget {
                 trailing: '${state.savedCandidates.length}'),
             item(Icons.notifications_none, context.tr('notificationSettings'),
                 () => _push(context, const NotificationSettingsScreen())),
-            item(Icons.language, context.tr('language'), () => _chooseLanguage(context),
+            item(Icons.language, context.tr('language'), () => chooseLanguage(context),
                 trailing: state.isTelugu ? 'తెలుగు' : 'English'),
             item(Icons.privacy_tip_outlined, context.tr('privacyPolicy'), () => openLegal(context, 'privacy')),
             item(Icons.description_outlined, context.tr('terms'), () => openLegal(context, 'terms')),
@@ -205,7 +205,7 @@ class ProfileScreen extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
               child: OutlinedButton(
-                onPressed: () => _signOut(context),
+                onPressed: () => confirmSignOut(context),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: AppColors.red,
                   side: const BorderSide(color: AppColors.red),
