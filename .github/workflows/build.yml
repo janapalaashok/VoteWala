@@ -72,7 +72,7 @@ jobs:
           python3 tools/apply_remote_icon.py
           if [ -f brand/app-icon-override.png ]; then pip install pillow && python3 tools/make_brand_assets.py; fi
       # Build number grows every run so each APK installs as an update.
-      - run: flutter build apk --release --split-per-abi --build-number=$((100 + ${{ github.run_number }}))
+      - run: flutter build apk --release --split-per-abi --build-number=$((100 + ${{ github.run_number }})) --dart-define=SITE_URL="$(head -n1 hosting/SITE_URL)"
       - run: |
           cp build/app/outputs/flutter-apk/app-arm64-v8a-release.apk VoteWala.apk
           cp build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk VoteWala-old-phones.apk

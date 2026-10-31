@@ -39,6 +39,7 @@ jobs:
         run: |
           # Cloud Run's address is fixed: https://SERVICE-PROJECT_NUMBER.REGION.run.app
           SITE_URL="${{ inputs.site_url }}"
+          SITE_URL="${SITE_URL:-$(head -n1 hosting/SITE_URL 2>/dev/null)}"
           SITE_URL="${SITE_URL:-https://$SERVICE-$PROJECT_NUMBER.$REGION.run.app}"
           echo "Site: $SITE_URL"
           flutter pub get

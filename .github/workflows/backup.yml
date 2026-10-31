@@ -1,0 +1,21 @@
+name: Daily backup
+
+# Exports the Firestore database to a private bucket every night (02:11 IST);
+# exports older than 30 days are deleted automatically.
+on:
+  schedule:
+    - cron: '41 20 * * *'
+  push:
+    paths: [tools/backup_firestore.py]
+  workflow_dispatch:
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          pip install google-auth requests
+          python3 tools/backup_firestore.py

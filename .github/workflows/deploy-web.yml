@@ -1,10 +1,12 @@
 name: Deploy website
 
-# Builds the Flutter website and publishes it to Firebase Hosting
-# (https://votewala-a2dcd.web.app). Needs the FIREBASE_SERVICE_ACCOUNT secret
-# (see docs/FIREBASE_SETUP.md); skipped until it exists.
-# Manual only: run it from the Actions tab once a release is approved.
+# Builds the Flutter website and publishes it to Firebase Hosting, which
+# serves https://votewala.in (and votewala-a2dcd.web.app). Needs the
+# FIREBASE_SERVICE_ACCOUNT secret (see docs/FIREBASE_SETUP.md).
+# A release is approved by editing hosting/RELEASE; code pushes never deploy.
 on:
+  push:
+    paths: [hosting/RELEASE]
   workflow_dispatch:
 
 jobs:
@@ -23,7 +25,7 @@ jobs:
           channel: stable
           cache: true
       - if: env.HAS_SERVICE_ACCOUNT == 'true'
-        run: flutter pub get && flutter build web --release
+        run: flutter pub get && flutter build web --release --dart-define=SITE_URL="$(head -n1 hosting/SITE_URL)"
       - name: Deploy to Firebase Hosting
         if: env.HAS_SERVICE_ACCOUNT == 'true'
         env:
