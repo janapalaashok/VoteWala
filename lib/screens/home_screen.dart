@@ -12,6 +12,7 @@ import '../widgets/common.dart';
 import '../widgets/painters.dart';
 import 'ap_map_screen.dart';
 import 'browse_screens.dart';
+import 'closed_polls_screen.dart';
 import 'constituency_detail_screen.dart';
 import 'featured_poll_screen.dart';
 import 'live_results_screen.dart';
@@ -109,8 +110,12 @@ class HomeScreen extends StatelessWidget {
                   _TopSeats(ids: home.topMp),
                   const SizedBox(height: 8),
                 ],
-                if (home.showFeatured && featuredPolls.isNotEmpty) ...[
-                  SectionHeader(context.tr('featuredPolls')),
+                if (home.showFeatured && (featuredPolls.isNotEmpty || closedFeaturedPolls.isNotEmpty)) ...[
+                  SectionHeader(
+                    context.tr('featuredPolls'),
+                    action: closedFeaturedPolls.isEmpty ? null : context.tr('closedPolls'),
+                    onAction: () => openClosedPolls(context),
+                  ),
                   const _FeaturedPolls(),
                 ],
               ]),

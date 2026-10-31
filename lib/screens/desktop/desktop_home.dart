@@ -16,6 +16,7 @@ import '../../widgets/painters.dart';
 import '../ap_map_screen.dart';
 import '../browse_screens.dart';
 import '../main_shell.dart';
+import '../closed_polls_screen.dart';
 import '../legal_screens.dart';
 import '../my_constituency_screen.dart';
 import 'desktop_sections.dart';
@@ -64,10 +65,17 @@ class DesktopHome extends StatelessWidget {
         ]),
       ),
       const _Section(top: 28, child: YourConstituencyCard()),
-      if (home.showFeatured && featuredPolls.isNotEmpty)
+      if (home.showFeatured && (featuredPolls.isNotEmpty || closedFeaturedPolls.isNotEmpty))
         _Section(
           title: context.tr('featuredPolls'),
           subtitle: month.label(context.isTelugu),
+          action: closedFeaturedPolls.isEmpty
+              ? null
+              : TextButton.icon(
+                  onPressed: () => openClosedPolls(context),
+                  icon: const Icon(Icons.inventory_2_outlined),
+                  label: Text('${context.tr('closedPolls')} (${closedFeaturedPolls.length})'),
+                ),
           child: DesktopFeatured(showMonthlyVotes: home.showMonthlyVotes),
         ),
       if (home.showTopSeats)
@@ -453,6 +461,7 @@ class _Footer extends StatelessWidget {
                 link(context.tr('mlaPollsShort'), () => shell?.go(ShellTab.mla)),
                 link(context.tr('mpPollsShort'), () => shell?.go(ShellTab.mp)),
                 link(context.tr('results'), () => shell?.go(ShellTab.results)),
+                link(context.tr('closedPolls'), () => openClosedPolls(context)),
                 link(context.tr('yourConstituency'), () => openMyConstituency(context)),
               ]),
               column(context.tr('footerLegal'), [

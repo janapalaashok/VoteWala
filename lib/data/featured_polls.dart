@@ -220,9 +220,20 @@ final defaultFeaturedPolls = <FeaturedPoll>[
 ];
 
 /// Featured polls currently enabled by the admin.
-/// Active featured polls, at most [CivicConfig.maxFeatured] (5).
-List<FeaturedPoll> get featuredPolls =>
-    [for (final p in appConfig.featured) if (p.enabled) p].take(appConfig.civic.maxFeatured).toList();
+/// Featured polls still open (or not started), at most
+/// [CivicConfig.maxFeatured] (5). Ended polls move to [closedFeaturedPolls].
+List<FeaturedPoll> get featuredPolls => [
+      for (final p in appConfig.featured)
+        if (p.enabled && !_ended(p)) p,
+    ].take(appConfig.civic.maxFeatured).toList();
+
+/// Ended featured polls, most recently closed first.
+List<FeaturedPoll> get closedFeaturedPolls => [
+      for (final p in appConfig.featured)
+        if (p.enabled && _ended(p)) p,
+    ]..sort((a, b) => b.end.compareTo(a.end));
+
+bool _ended(FeaturedPoll p) => !istNow().isBefore(p.end);
 
 FeaturedPoll featuredById(String id) =>
     appConfig.featured.firstWhere((p) => p.id == id, orElse: () => defaultFeaturedPolls.firstWhere((p) => p.id == id));

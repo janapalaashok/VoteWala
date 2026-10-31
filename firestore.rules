@@ -317,10 +317,16 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
-    // Admin list: managed in the Firebase console only.
+    // Admin list: created by tools/create_admin.py or the Firebase console.
+    // An admin may update only their own name, username and the
+    // "must change password" flag (cleared after the first sign-in).
     match /admins/{uid} {
       allow read: if signedIn() && request.auth.uid == uid;
-      allow write: if false;
+      allow update: if isAdmin() && request.auth.uid == uid
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['displayName', 'username', 'mustChangePassword'])
+        && request.resource.data.get('mustChangePassword', false) == false;
+      allow create, delete: if false;
     }
   }
 }

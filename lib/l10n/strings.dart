@@ -340,6 +340,11 @@ const _en = <String, String>{
   'mlaPollsShort': "MLA polls",
   'mpPollsShort': "MP polls",
   'footerRights': "All rights reserved.",
+  'closedPolls': "Closed polls",
+  'closedPollsSub': "Polls that have ended, with their final results.",
+  'noClosedPolls': "No polls have closed yet.",
+  'pastMonthResults': "Earlier months' MLA & MP results",
+  'pastMonthResultsSub': "Choose a month (e.g. {month}) on the Results page",
 };
 
 const _te = <String, String>{
@@ -667,4 +672,9 @@ const _te = <String, String>{
   'mlaPollsShort': "MLA పోల్స్",
   'mpPollsShort': "MP పోల్స్",
   'footerRights': "అన్ని హక్కులు ప్రత్యేకించబడ్డాయి.",
+  'closedPolls': "ముగిసిన పోల్స్",
+  'closedPollsSub': "ముగిసిన పోల్స్, వాటి తుది ఫలితాలతో.",
+  'noClosedPolls': "ఇంకా ఏ పోల్ ముగియలేదు.",
+  'pastMonthResults': "గత నెలల MLA & MP ఫలితాలు",
+  'pastMonthResultsSub': "ఫలితాల పేజీలో నెల ఎంచుకోండి (ఉదా. {month})",
 };

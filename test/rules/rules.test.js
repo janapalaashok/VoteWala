@@ -240,6 +240,15 @@ describe('admin data', () => {
     await assertFails(getDoc(doc(db('boss'), `votes/mla-${M}/ballots/alice`)));
   });
 
+  test('admins edit only their own profile fields', async () => {
+    await env.withSecurityRulesDisabled((ctx) =>
+      setDoc(doc(ctx.firestore(), 'admins/boss'), { role: 'owner', username: 'admin', mustChangePassword: true }));
+    await assertSucceeds(updateDoc(doc(db('boss'), 'admins/boss'), { mustChangePassword: false, displayName: 'Ashok' }));
+    await assertFails(updateDoc(doc(db('boss'), 'admins/boss'), { role: 'superuser' }));
+    await assertFails(updateDoc(doc(db('boss'), 'admins/boss'), { mustChangePassword: true }));
+    await assertFails(setDoc(doc(db('alice'), 'admins/alice'), { role: 'owner' }));
+  });
+
   test('only admins change settings and grievances', async () => {
     await assertFails(setDoc(doc(db('alice'), 'settings/thresholds'), { default: 1 }));
     await assertFails(setDoc(doc(db('alice'), 'grievances/g1'), { status: 'resolved' }));

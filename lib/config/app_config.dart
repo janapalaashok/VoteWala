@@ -15,7 +15,7 @@ class BrandingConfig {
     this.logoUrl,
     this.markUrl,
     this.appIconUrl,
-    this.contactEmail,
+    this.contactEmail = 'contact@votewala.in',
   });
 
   final String appName;
@@ -85,7 +85,7 @@ class BrandingConfig {
       logoUrl: _str(j['logoUrl']),
       markUrl: _str(j['markUrl']),
       appIconUrl: _str(j['appIconUrl']),
-      contactEmail: _str(j['contactEmail']),
+      contactEmail: _str(j['contactEmail']) ?? d.contactEmail,
     );
   }
 }

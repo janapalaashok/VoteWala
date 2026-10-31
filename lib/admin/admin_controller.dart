@@ -42,6 +42,15 @@ class AdminController extends ChangeNotifier {
 
   bool signedIn = false;
   String? email;
+
+  /// From admins/{uid}.
+  String role = 'admin';
+  String? displayName;
+
+  /// The first sign-in with the starting password must set a new one.
+  bool mustChangePassword = false;
+
+  String get username => FirebaseRest.usernameOf(email);
   bool busy = false;
   String? error;
 
@@ -57,19 +66,23 @@ class AdminController extends ChangeNotifier {
         jsonEncode(published.toJson()..remove('updatedAt')..remove('updatedBy'));
   }
 
-  Future<void> signIn(String email, String password) async {
+  Future<void> signIn(String username, String password) async {
     final rest = _rest;
     if (rest == null) return;
     _setBusy(true);
     try {
-      await rest.signIn(email, password);
-      if (!await rest.isAdmin()) {
+      await rest.signIn(username, password);
+      final profile = await rest.adminProfile();
+      if (profile == null) {
         rest.signOut();
-        throw FirebaseException('This account is not an admin. Add its UID to the "admins" collection.');
+        throw FirebaseException('This account is not an admin.');
       }
+      role = (profile['role'] as String?) ?? 'admin';
+      displayName = profile['displayName'] as String?;
+      mustChangePassword = profile['mustChangePassword'] == true;
       await _service.refresh();
       if (_prefs.getString(_draftKey) == null) _draft = _service.config;
-      this.email = rest.email;
+      email = rest.email;
       signedIn = true;
       error = null;
       _recomputeDirty();
@@ -90,8 +103,47 @@ class AdminController extends ChangeNotifier {
     _rest?.signOut();
     signedIn = false;
     email = null;
+    mustChangePassword = false;
     notifyListeners();
   }
+
+  /// Runs an account change; returns an error message or null.
+  Future<String?> _account(Future<void> Function(FirebaseRest rest) change) async {
+    final rest = _rest;
+    if (rest == null) return 'Not available in demo mode';
+    _setBusy(true);
+    try {
+      await change(rest);
+      email = rest.email;
+      return null;
+    } catch (e) {
+      return '$e';
+    } finally {
+      _setBusy(false);
+    }
+  }
+
+  Future<String?> changePassword(String current, String next) => _account((rest) async {
+        await rest.changePassword(current, next);
+        if (mustChangePassword) {
+          await rest.updateAdminProfile({'mustChangePassword': false});
+          mustChangePassword = false;
+        }
+      });
+
+  Future<String?> changeUsername(String next) => _account((rest) async {
+        final clean = next.trim().toLowerCase();
+        if (!RegExp(r'^[a-z0-9._-]{3,30}$').hasMatch(clean) && !clean.contains('@')) {
+          throw FirebaseException('Use 3–30 letters, numbers, dots, dashes or underscores.');
+        }
+        await rest.changeUsername(clean);
+        await rest.updateAdminProfile({'username': FirebaseRest.usernameOf(rest.email)});
+      });
+
+  Future<String?> changeDisplayName(String name) => _account((rest) async {
+        await rest.updateAdminProfile({'displayName': name.trim()});
+        displayName = name.trim();
+      });
 
   /// Applies an edit to the draft.
   void update(AppConfig Function(AppConfig c) edit) {

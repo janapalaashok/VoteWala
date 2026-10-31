@@ -16,6 +16,7 @@ import 'pages/issues_page.dart';
 import 'pages/review_pages.dart';
 import 'pages/home_page.dart';
 import 'pages/parties_page.dart';
+import 'pages/profile_page.dart';
 import 'pages/publish_page.dart';
 
 class AdminApp extends StatefulWidget {
@@ -69,7 +70,11 @@ class _AdminAppState extends State<AdminApp> {
         ),
         home: ListenableBuilder(
           listenable: _controller,
-          builder: (context, _) => _controller.signedIn ? const AdminShell() : const AdminLoginPage(),
+          builder: (context, _) => !_controller.signedIn
+              ? const AdminLoginPage()
+              : _controller.mustChangePassword
+                  ? const ForcePasswordChangePage()
+                  : const AdminShell(),
         ),
       ),
     );
@@ -138,8 +143,8 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
               ] else ...[
                 TextField(
                   controller: _email,
-                  keyboardType: TextInputType.emailAddress,
-                  decoration: const InputDecoration(labelText: 'Email', prefixIcon: Icon(Icons.mail_outline)),
+                  autofillHints: const [AutofillHints.username],
+                  decoration: const InputDecoration(labelText: 'Username', prefixIcon: Icon(Icons.person_outline)),
                 ),
                 const SizedBox(height: 14),
                 TextField(
@@ -190,6 +195,7 @@ const _nav = [
   _NavItem(Icons.insights_outlined, 'Analytics', AnalyticsPage()),
   _NavItem(Icons.tune_outlined, 'Issues, badges & sharing', CivicSettingsPage()),
   _NavItem(Icons.cloud_upload_outlined, 'Publish & backup', PublishPage()),
+  _NavItem(Icons.account_circle_outlined, 'My profile', AdminProfilePage()),
 ];
 
 /// Lets pages jump to another section.
@@ -277,14 +283,18 @@ class _AdminShellState extends State<AdminShell> {
           Padding(
             padding: const EdgeInsets.all(16),
             child: Row(children: [
-              CircleAvatar(
-                radius: 18,
-                backgroundColor: AdminColors.accent,
-                child: Text((admin.email ?? 'A')[0].toUpperCase(), style: const TextStyle(color: Colors.white)),
+              InkWell(
+                onTap: () => setState(() => _index = _nav.length - 1),
+                child: CircleAvatar(
+                  radius: 18,
+                  backgroundColor: AdminColors.accent,
+                  child: Text((admin.username.isEmpty ? 'A' : admin.username)[0].toUpperCase(),
+                      style: const TextStyle(color: Colors.white)),
+                ),
               ),
               const SizedBox(width: 10),
               Expanded(
-                child: Text(admin.email ?? '',
+                child: Text(admin.displayName?.isNotEmpty == true ? admin.displayName! : admin.username,
                     overflow: TextOverflow.ellipsis, style: const TextStyle(color: Color(0xFFCBD5E1), fontSize: 13)),
               ),
               IconButton(

@@ -61,7 +61,20 @@ class FirebaseRest {
 
   Map<String, String> get _auth => {if (_idToken != null) 'Authorization': 'Bearer $_idToken'};
 
-  Future<void> signIn(String email, String password) async {
+  /// Admins sign in with a username; it maps to a sign-in-only address.
+  static const adminDomain = 'admin.votewala.in';
+
+  static String loginEmail(String usernameOrEmail) {
+    final v = usernameOrEmail.trim().toLowerCase();
+    return v.contains('@') ? v : '$v@$adminDomain';
+  }
+
+  /// "admin" for admin@admin.votewala.in, the address otherwise.
+  static String usernameOf(String? email) =>
+      email == null ? '' : (email.endsWith('@$adminDomain') ? email.split('@').first : email);
+
+  Future<void> signIn(String usernameOrEmail, String password) async {
+    final email = loginEmail(usernameOrEmail);
     final r = await _http.post(
       Uri.parse('https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${settings.apiKey}'),
       headers: {'Content-Type': 'application/json'},
@@ -75,7 +88,7 @@ class FirebaseRest {
           'Email/Password sign-in is not enabled: Firebase console → Authentication → Sign-in method.',
         'USER_DISABLED' => 'This account is disabled in Firebase Authentication.',
         _ when code.startsWith('TOO_MANY_ATTEMPTS') => 'Too many attempts. Try again in a few minutes.',
-        _ when code.contains('INVALID') || code.contains('NOT_FOUND') => 'Wrong email or password',
+        _ when code.contains('INVALID') || code.contains('NOT_FOUND') => 'Wrong username or password',
         _ => code,
       });
     }
@@ -91,11 +104,70 @@ class FirebaseRest {
   }
 
   /// True when the signed-in user is listed in the admins collection.
-  Future<bool> isAdmin() async {
-    if (uid == null) return false;
+  Future<bool> isAdmin() async => (await adminProfile()) != null;
+
+  /// The admins/{uid} document (role, username, displayName,
+  /// mustChangePassword), or null for non-admins.
+  Future<Map<String, Object?>?> adminProfile() async {
+    if (uid == null) return null;
     final r = await _http.get(Uri.parse('$_docs/admins/$uid'), headers: _auth);
-    return r.statusCode == 200;
+    if (r.statusCode != 200) return null;
+    final fields = (jsonDecode(r.body) as Map<String, dynamic>)['fields'] as Map<String, dynamic>? ?? const {};
+    return {
+      for (final e in fields.entries) e.key: (e.value as Map).values.first,
+    };
   }
+
+  /// Updates the admin's own profile fields (see firestore.rules).
+  Future<void> updateAdminProfile(Map<String, Object> fields) async {
+    final mask = fields.keys.map((k) => 'updateMask.fieldPaths=$k').join('&');
+    final r = await _http.patch(
+      Uri.parse('$_docs/admins/$uid?$mask'),
+      headers: {..._auth, 'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'fields': {
+          for (final e in fields.entries)
+            e.key: e.value is bool ? {'booleanValue': e.value} : {'stringValue': '${e.value}'},
+        },
+      }),
+    );
+    if (r.statusCode != 200) throw FirebaseException('Could not save profile (${r.statusCode})');
+  }
+
+  Future<void> _updateAccount(Map<String, Object> changes) async {
+    final r = await _http.post(
+      Uri.parse('https://identitytoolkit.googleapis.com/v1/accounts:update?key=${settings.apiKey}'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'idToken': _idToken, ...changes, 'returnSecureToken': true}),
+    );
+    final body = jsonDecode(r.body) as Map<String, dynamic>;
+    if (r.statusCode != 200) {
+      final code = (body['error'] as Map?)?['message'] as String? ?? 'UPDATE_FAILED';
+      throw FirebaseException(switch (code) {
+        _ when code.startsWith('WEAK_PASSWORD') => 'Use at least 6 characters for the password.',
+        'EMAIL_EXISTS' => 'That username is already taken.',
+        'CREDENTIAL_TOO_OLD_LOGIN_AGAIN' || 'TOKEN_EXPIRED' => 'Please sign in again and retry.',
+        _ => code,
+      });
+    }
+    _idToken = body['idToken'] as String? ?? _idToken;
+    email = body['email'] as String? ?? email;
+  }
+
+  /// Checks [current] by signing in again, then sets [next].
+  Future<void> changePassword(String current, String next) async {
+    final address = email;
+    if (address == null) throw FirebaseException('Not signed in');
+    try {
+      await signIn(address, current);
+    } on FirebaseException {
+      throw FirebaseException('Current password is wrong');
+    }
+    await _updateAccount({'password': next});
+  }
+
+  /// Changes the sign-in username (or email).
+  Future<void> changeUsername(String username) => _updateAccount({'email': loginEmail(username)});
 
   Future<AppConfig?> fetchConfig() async {
     final r = await _http.get(Uri.parse('$_docs/config/app?key=${settings.apiKey}'));
