@@ -287,3 +287,33 @@ describe('admin data', () => {
     await assertSucceeds(getDoc(doc(env.unauthenticatedContext().firestore(), 'grievances/g1')));
   });
 });
+
+describe('traffic', () => {
+  const visit = () => ({
+    platform: 'web', device: 'mobile', os: 'Android', browser: 'Chrome', country: 'IN', tz: 'Asia/Kolkata',
+    lang: 'te-IN', source: 'facebook', ref: 'm.facebook.com', landing: 'home', signedIn: false, at: serverTimestamp(),
+  });
+
+  test('anyone records a visit once a day; only admins read', async () => {
+    const anon = env.unauthenticatedContext().firestore();
+    const path = 'traffic/2026-11-01/visits/AbCdEfGhIjKlMnOpQr12';
+    await assertSucceeds(setDoc(doc(anon, path), visit()));
+    await assertFails(setDoc(doc(anon, path), visit()));
+    await assertFails(setDoc(doc(anon, 'traffic/2026-11-01/visits/short'), visit()));
+    await assertFails(setDoc(doc(anon, 'traffic/2026-11-01/visits/AbCdEfGhIjKlMnOpQr13'), { ...visit(), name: 'x' }));
+    await assertFails(setDoc(doc(anon, 'traffic/2026-11-01/visits/AbCdEfGhIjKlMnOpQr14'), { ...visit(), country: 'India' }));
+    await assertFails(setDoc(doc(anon, 'traffic/today/visits/AbCdEfGhIjKlMnOpQr15'), visit()));
+    await assertFails(getDoc(doc(anon, path)));
+    await assertFails(getDoc(doc(db('alice'), path)));
+    await env.withSecurityRulesDisabled((ctx) => setDoc(doc(ctx.firestore(), 'admins/boss'), { role: 'admin' }));
+    await assertSucceeds(getDoc(doc(db('boss'), path)));
+  });
+
+  test('signed-in users record their sign-in method', async () => {
+    const login = { method: 'google', kind: 'signup', platform: 'web', at: serverTimestamp() };
+    await assertSucceeds(setDoc(doc(db('alice'), 'traffic/2026-11-01/logins/l1'), login));
+    await assertFails(setDoc(doc(env.unauthenticatedContext().firestore(), 'traffic/2026-11-01/logins/l2'), login));
+    await assertFails(setDoc(doc(db('alice'), 'traffic/2026-11-01/logins/l3'), { ...login, method: 'hack' }));
+    await assertFails(setDoc(doc(db('alice'), 'traffic/2026-11-01/logins/l4'), { ...login, email: 'a@x.com' }));
+  });
+});

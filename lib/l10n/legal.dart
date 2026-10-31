@@ -40,7 +40,7 @@ class LegalDoc {
       );
 }
 
-const legalUpdated = '31 October 2026';
+const legalUpdated = '1 November 2026';
 
 /// Built-in texts; the admin panel can replace any of them.
 const defaultLegalDocs = [
@@ -177,12 +177,19 @@ const defaultLegalDocs = [
     'cookies',
     'Data Storage & Cookies',
     'డేటా నిల్వ & కుకీలు',
-    'VoteWala ప్రకటనల కుకీలు లేదా ట్రాకర్లు వాడదు. సైన్ ఇన్, భాష, సేవ్ చేసిన అభ్యర్థుల కోసం మాత్రమే మీ బ్రౌజర్/యాప్‌లో చిన్న డేటా ఉంచుతాం.',
+    'VoteWala ప్రకటనల కుకీలు లేదా ట్రాకర్లు వాడదు. సైన్ ఇన్, భాష, సేవ్ చేసిన అభ్యర్థుల కోసం మాత్రమే మీ బ్రౌజర్/యాప్‌లో చిన్న డేటా ఉంచుతాం. ఎంత మంది సైట్ వాడుతున్నారో తెలుసుకోవడానికి పేరు, ఈమెయిల్, IP లేకుండా రోజుకు ఒక అనామక సందర్శన నమోదు చేస్తాం.',
     [
       ('What we store on your device',
           '• Sign-in session (Firebase Authentication), so you stay signed in.\n'
               '• Your language, saved candidates and notification preferences.\n'
-              '• A cached copy of the site settings so pages load quickly.'),
+              '• A cached copy of the site settings so pages load quickly.\n'
+              '• A random visitor number, so a visit is counted once a day.'),
+      ('Visit statistics',
+          'To know how many people use VoteWala, the site and app record one anonymous entry per device per day: '
+              'device type, operating system, browser, country (worked out from the device time zone), the site or '
+              'app that linked to us, and the first page opened. When you sign in we record only the method '
+              '(Google, email or mobile). These entries contain no name, email, phone number or IP address, are seen '
+              'only by VoteWala admins as totals, and are never sold or shared.'),
       ('What we do not use',
           'No advertising cookies, no third-party trackers and no cross-site profiling. Google sign-in may set cookies '
               'on Google\'s own pages under Google\'s policies.'),
