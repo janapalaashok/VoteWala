@@ -37,6 +37,10 @@ def check(r):
 
 
 config = {
+    # Every page address (votewala.in/results, /c/mla-37, /admin ...) serves
+    # the app, so refreshing or opening a link never shows a 404. Real files
+    # and Firebase's /__/ pages are served first.
+    "rewrites": [{"glob": "**", "path": "/index.html"}],
     "headers": [
         # App code keeps fixed file names: browsers must check for a new
         # release every time (cheap: unchanged files answer 304).

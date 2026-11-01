@@ -26,8 +26,8 @@ import 'external_data.dart';
 const siteUrl = String.fromEnvironment('SITE_URL', defaultValue: 'https://votewala-a2dcd.web.app');
 final siteHost = Uri.parse(siteUrl).host;
 
-String constituencyLink(Constituency c) => '$siteUrl/#/c/${c.id}';
-String featuredLink(FeaturedPoll p) => '$siteUrl/#/f/${p.id}';
+String constituencyLink(Constituency c) => '$siteUrl/c/${c.id}';
+String featuredLink(FeaturedPoll p) => '$siteUrl/f/${p.id}';
 
 class ShareRow {
   const ShareRow(this.label, this.share, this.color, this.avatar);

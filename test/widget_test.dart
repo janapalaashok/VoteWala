@@ -182,13 +182,13 @@ void main() {
   });
 
   test('share links and deep links round-trip', () {
-    expect(constituencyLink(ApData.byId('mla-37')), 'https://votewala-a2dcd.web.app/#/c/mla-37');
+    expect(constituencyLink(ApData.byId('mla-37')), 'https://votewala-a2dcd.web.app/c/mla-37');
     DeepLink.parse('/c/mla-37');
-    DeepLink.parse('/admin'); // not a share link: keeps the earlier one
+    DeepLink.parse('/admin'); // not a page link: keeps the earlier one
     DeepLink.parse('/c/<script>'); // rejected
-    expect(DeepLink.pending, 'c:mla-37');
+    expect(DeepLink.pending, '/c/mla-37');
     DeepLink.clear();
-    expect(featuredLink(featuredById('cm-2026')), 'https://votewala-a2dcd.web.app/#/f/cm-2026');
+    expect(featuredLink(featuredById('cm-2026')), 'https://votewala-a2dcd.web.app/f/cm-2026');
   });
 
   test('formatting', () {

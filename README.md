@@ -2,7 +2,7 @@
 
 **Your Voice. Your Choice. / మీ అభిప్రాయం. మీ ఎంపిక.**
 
-- Website: https://votewala-a2dcd.web.app (admin: https://votewala-a2dcd.web.app/#/admin)
+- Website: https://votewala-a2dcd.web.app (admin: https://votewala-a2dcd.web.app/admin)
 - Android test APK: https://github.com/janapalaashok/VoteWala/releases/tag/test-build
 - Admin panel & Firebase setup: [docs/FIREBASE_SETUP.md](docs/FIREBASE_SETUP.md)
 

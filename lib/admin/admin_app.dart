@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../utils.dart';
+import '../state/url_sync.dart';
 import 'admin_controller.dart';
 import 'admin_widgets.dart';
 import 'pages/branding_page.dart';
@@ -41,6 +42,9 @@ class _AdminAppState extends State<AdminApp> {
       controller: _controller,
       child: MaterialApp(
         title: 'VoteWala Admin',
+        // The admin console keeps its own address: votewala.in/admin
+        initialRoute: '/',
+        navigatorObservers: [UrlSync.instance..setRoot('/admin')],
         debugShowCheckedModeBanner: false,
         theme: ThemeData(
           useMaterial3: true,

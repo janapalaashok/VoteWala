@@ -1,6 +1,6 @@
 # Connect the admin panel to Firebase (≈ 10 minutes)
 
-The admin panel (`https://<website>/#/admin`) saves everything — branding, colours,
+The admin panel (`https://<website>/admin`) saves everything — branding, colours,
 logos, parties, candidate names & photos, constituency names, featured polls and home
 page content — into **one Firebase document**. The Android/iOS app and the website read
 it on every launch. Until Firebase is connected, the panel runs in **demo mode**
@@ -93,7 +93,7 @@ first, then publishes `firestore.rules` and `storage.rules`. The service account
 (Firestore → Rules, Storage → Rules) and click Publish.
 
 ## Using the admin panel
-1. Open `https://<website>/#/admin` and sign in with the admin email/password.
+1. Open `https://<website>/admin` and sign in with the admin email/password.
 2. Edit anything; changes go into a **draft** (kept in your browser).
 3. Click **Publish** — users get the changes the next time they open the app or website.
 4. **Publish & backup → Export JSON** before big changes.
