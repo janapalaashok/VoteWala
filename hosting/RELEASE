@@ -11,3 +11,4 @@
 2026-11-01 admin Traffic dashboard, visit statistics, admin password reset
 2026-11-01 app code always fresh (no stale admin/site after a release)
 2026-11-01 clean page addresses (votewala.in/results, /c/..., /admin)
+2026-11-01 mobile-friendly admin console

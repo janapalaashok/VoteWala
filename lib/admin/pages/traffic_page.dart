@@ -46,6 +46,7 @@ class _TrafficPageState extends State<TrafficPage> {
         subtitle: 'Real visits to votewala.in and the app, recorded by the site. Anonymous: no names, emails or IP addresses.',
         actions: [
           SegmentedButton<int>(
+            showSelectedIcon: false,
             segments: const [
               ButtonSegment(value: 1, label: Text('Today')),
               ButtonSegment(value: 7, label: Text('7 days')),
@@ -255,7 +256,9 @@ class _Breakdown extends StatelessWidget {
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 5),
                     child: Row(children: [
-                      SizedBox(width: 150, child: Text(name, maxLines: 1, overflow: TextOverflow.ellipsis)),
+                      SizedBox(
+                          width: isAdminPhone(context) ? 108 : 150,
+                          child: Text(name, maxLines: 1, overflow: TextOverflow.ellipsis)),
                       Expanded(
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(4),

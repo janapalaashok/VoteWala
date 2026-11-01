@@ -20,7 +20,9 @@ class _ConstituenciesPageState extends State<ConstituenciesPage> {
     final admin = AdminScope.of(context);
     final names = admin.draft.constituencyNames;
     final q = _query.toLowerCase();
-    final list = ApData.of(_type).where((c) => q.isEmpty || c.en.toLowerCase().contains(q) || c.te.contains(q)).toList();
+    final list = ApData.of(_type)
+        .where((c) => q.isEmpty || c.en.toLowerCase().contains(q) || c.te.contains(q))
+        .toList();
 
     void set(Constituency c, {String? en, String? te}) {
       final cur = names[c.id] ?? const NamePair();
@@ -31,67 +33,97 @@ class _ConstituenciesPageState extends State<ConstituenciesPage> {
       admin.update((cfg) => cfg.copyWith(constituencyNames: {...cfg.constituencyNames, c.id: next}));
     }
 
+    final phone = isAdminPhone(context);
+    Widget enField(Constituency c) => DraftField(
+      key: ValueKey('en-${c.id}'),
+      label: 'English',
+      hint: c.en,
+      value: names[c.id]?.en ?? c.en,
+      onChanged: (v) => set(c, en: v),
+    );
+    Widget teField(Constituency c) => DraftField(
+      key: ValueKey('te-${c.id}'),
+      label: 'Telugu',
+      hint: c.te,
+      value: names[c.id]?.te ?? c.te,
+      onChanged: (v) => set(c, te: v),
+    );
+
     return AdminPage(
       title: 'Constituencies',
       subtitle: 'Display names in English and Telugu. Leave a field empty to use the official name.',
       children: [
         AdminCard(
-          child: Row(children: [
-            SegmentedButton<ElectionType>(
-              segments: const [
-                ButtonSegment(value: ElectionType.mla, label: Text('Assembly (175)')),
-                ButtonSegment(value: ElectionType.mp, label: Text('Parliament (25)')),
-              ],
-              selected: {_type},
-              onSelectionChanged: (s) => setState(() => _type = s.first),
-            ),
-            const SizedBox(width: 16),
-            SizedBox(
-              width: 300,
-              child: TextField(
-                decoration: const InputDecoration(prefixIcon: Icon(Icons.search), hintText: 'Search'),
-                onChanged: (v) => setState(() => _query = v.trim()),
+          child: Wrap(
+            spacing: 16,
+            runSpacing: 12,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              SegmentedButton<ElectionType>(
+                segments: const [
+                  ButtonSegment(value: ElectionType.mla, label: Text('Assembly (175)')),
+                  ButtonSegment(value: ElectionType.mp, label: Text('Parliament (25)')),
+                ],
+                selected: {_type},
+                onSelectionChanged: (s) => setState(() => _type = s.first),
               ),
-            ),
-          ]),
+              SizedBox(
+                width: 300,
+                child: TextField(
+                  decoration: const InputDecoration(prefixIcon: Icon(Icons.search), hintText: 'Search'),
+                  onChanged: (v) => setState(() => _query = v.trim()),
+                ),
+              ),
+            ],
+          ),
         ),
         AdminCard(
           padding: 0,
-          child: Column(children: [
-            for (final c in list)
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 10),
-                decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: AdminColors.border))),
-                child: Row(children: [
-                  SizedBox(width: 48, child: Text('${c.no}', style: const TextStyle(color: AdminColors.muted))),
-                  Expanded(
-                    child: DraftField(
-                      key: ValueKey('en-${c.id}'),
-                      label: 'English',
-                      hint: c.en,
-                      value: names[c.id]?.en ?? c.en,
-                      onChanged: (v) => set(c, en: v),
-                    ),
+          child: Column(
+            children: [
+              for (final c in list)
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: phone ? 14 : 22, vertical: 10),
+                  decoration: const BoxDecoration(
+                    border: Border(bottom: BorderSide(color: AdminColors.border)),
                   ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: DraftField(
-                      key: ValueKey('te-${c.id}'),
-                      label: 'Telugu',
-                      hint: c.te,
-                      value: names[c.id]?.te ?? c.te,
-                      onChanged: (v) => set(c, te: v),
-                    ),
-                  ),
-                  const SizedBox(width: 14),
-                  SizedBox(
-                    width: 140,
-                    child: Text(c.districts.map((d) => d.en).join(', '),
-                        overflow: TextOverflow.ellipsis, style: const TextStyle(color: AdminColors.muted, fontSize: 12.5)),
-                  ),
-                ]),
-              ),
-          ]),
+                  child: phone
+                      ? Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Text(
+                              '${c.no} · ${c.districts.map((d) => d.en).join(', ')}',
+                              style: const TextStyle(color: AdminColors.muted, fontSize: 12.5),
+                            ),
+                            const SizedBox(height: 8),
+                            enField(c),
+                            const SizedBox(height: 10),
+                            teField(c),
+                          ],
+                        )
+                      : Row(
+                          children: [
+                            SizedBox(
+                              width: 48,
+                              child: Text('${c.no}', style: const TextStyle(color: AdminColors.muted)),
+                            ),
+                            Expanded(child: enField(c)),
+                            const SizedBox(width: 14),
+                            Expanded(child: teField(c)),
+                            const SizedBox(width: 14),
+                            SizedBox(
+                              width: 140,
+                              child: Text(
+                                c.districts.map((d) => d.en).join(', '),
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(color: AdminColors.muted, fontSize: 12.5),
+                              ),
+                            ),
+                          ],
+                        ),
+                ),
+            ],
+          ),
         ),
       ],
     );

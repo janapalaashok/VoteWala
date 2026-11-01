@@ -21,7 +21,7 @@ class HomeContentPage extends StatelessWidget {
           title: 'Hero text',
           subtitle: 'Leave empty to use the built-in text.',
           child: Column(children: [
-            Row(children: [
+            AdminFieldRow(children: [
               Expanded(
                 child: DraftField(
                   label: 'Headline (English)',
@@ -40,7 +40,7 @@ class HomeContentPage extends StatelessWidget {
               ),
             ]),
             const SizedBox(height: 14),
-            Row(children: [
+            AdminFieldRow(children: [
               Expanded(
                 child: DraftField(
                   label: 'Sub-heading (English)',

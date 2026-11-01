@@ -131,9 +131,9 @@ class _CandidateRow extends StatelessWidget {
     return InkWell(
       onTap: () => showDialog<void>(context: context, builder: (_) => CandidateEditor(candidate: c)),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
+        padding: EdgeInsets.symmetric(horizontal: isAdminPhone(context) ? 14 : 22, vertical: 12),
         decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: AdminColors.border))),
-        child: Row(children: [
+        child: isAdminPhone(context) ? _phone(context, d, c, party, edited) : Row(children: [
           DraftAvatar(url: draftPhoto(d, c), color: party.color, size: 44, label: draftName(d, c)),
           const SizedBox(width: 16),
           Expanded(
@@ -176,6 +176,33 @@ class _CandidateRow extends StatelessWidget {
       ),
     );
   }
+  /// Phones: avatar, name, seat and party stacked so nothing is squeezed.
+  Widget _phone(BuildContext context, AppConfig d, Candidate c, Party party, bool edited) => Row(children: [
+        DraftAvatar(url: draftPhoto(d, c), color: party.color, size: 40, label: draftName(d, c)),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(draftName(d, c), style: const TextStyle(fontWeight: FontWeight.w700)),
+            const SizedBox(height: 2),
+            Text(
+              '${c.constituency.en} · ${c.constituency.isMla ? 'MLA' : 'MP'} · '
+              '${c.role == CandidateRole.won2024 ? 'Won 2024' : 'Runner-up'}',
+              style: const TextStyle(color: AdminColors.muted, fontSize: 12.5),
+            ),
+            const SizedBox(height: 4),
+            Wrap(spacing: 8, children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(color: party.color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(8)),
+                child: Text(party.short, style: TextStyle(color: party.color, fontWeight: FontWeight.w700, fontSize: 11.5)),
+              ),
+              if (edited)
+                const Text('Edited', style: TextStyle(color: AdminColors.accent, fontSize: 11.5, fontWeight: FontWeight.w700)),
+            ]),
+          ]),
+        ),
+        const Icon(Icons.chevron_right, color: AdminColors.muted),
+      ]);
 }
 
 class CandidateEditor extends StatefulWidget {

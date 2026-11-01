@@ -115,7 +115,8 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
           padding: const EdgeInsets.all(24),
           child: Container(
             width: 440,
-            padding: const EdgeInsets.all(36),
+            constraints: const BoxConstraints(maxWidth: 440),
+            padding: EdgeInsets.all(MediaQuery.sizeOf(context).width < 480 ? 24 : 36),
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(24),
@@ -318,36 +319,33 @@ class _AdminShellState extends State<AdminShell> {
     );
 
     final updated = admin.published.updatedAt;
+    final compact = MediaQuery.sizeOf(context).width < 1180;
     final topBar = Container(
       height: 68,
-      padding: const EdgeInsets.symmetric(horizontal: 28),
+      padding: EdgeInsets.symmetric(horizontal: compact ? 16 : 28),
       decoration: const BoxDecoration(
         color: Colors.white,
         border: Border(bottom: BorderSide(color: AdminColors.border)),
       ),
       child: Row(children: [
-        if (admin.demo)
-          _Pill(icon: Icons.science_outlined, label: 'Demo mode', color: const Color(0xFFEA580C))
-        else
-          _Pill(icon: Icons.cloud_done_outlined, label: 'Firebase connected', color: AdminColors.success),
-        const SizedBox(width: 10),
-        if (admin.dirty)
-          _Pill(icon: Icons.edit_note, label: 'Unpublished changes', color: const Color(0xFF2563EB))
-        else
-          _Pill(
-            icon: Icons.check_circle_outline,
-            label: updated == null ? 'Using built-in defaults' : 'Published ${formatDate(updated.toLocal())}',
-            color: AdminColors.muted,
+        Expanded(
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: _StatusPills(admin: admin, updated: updated, iconsOnly: compact),
           ),
-        const Spacer(),
+        ),
+        const SizedBox(width: 12),
         if (admin.busy) const Padding(
           padding: EdgeInsets.only(right: 16),
           child: SizedBox.square(dimension: 20, child: CircularProgressIndicator(strokeWidth: 2.4)),
         ),
-        TextButton(
-          onPressed: () => launchSite(),
-          child: const Text('View website'),
-        ),
+        if (compact)
+          IconButton(tooltip: 'View website', onPressed: launchSite, icon: const Icon(Icons.open_in_new))
+        else
+          TextButton(
+            onPressed: () => launchSite(),
+            child: const Text('View website'),
+          ),
         const SizedBox(width: 8),
         OutlinedButton(
           onPressed: admin.dirty ? admin.discardDraft : null,
@@ -355,20 +353,31 @@ class _AdminShellState extends State<AdminShell> {
         ),
         const SizedBox(width: 10),
         FilledButton.icon(
-          onPressed: admin.dirty && !admin.busy
-              ? () async {
-                  final ok = await admin.publish();
-                  if (context.mounted) {
-                    showAdminSnack(context, ok ? 'Published. Users see the changes on next open.' : admin.error ?? 'Failed',
-                        error: !ok);
-                  }
-                }
-              : null,
+          onPressed: admin.dirty && !admin.busy ? () => _publish(context, admin) : null,
           icon: const Icon(Icons.rocket_launch_outlined, size: 18),
           label: const Text('Publish'),
         ),
       ]),
     );
+
+    final errorBanner = admin.error != null && admin.signedIn
+        ? MaterialBanner(
+            backgroundColor: const Color(0xFFFEF2F2),
+            content: Text(admin.error!, style: const TextStyle(color: AdminColors.danger)),
+            actions: [TextButton(onPressed: admin.clearError, child: const Text('Dismiss'))],
+          )
+        : null;
+
+    if (isAdminPhone(context)) {
+      return AdminNav(
+        go: (label) => setState(() => _index = _nav.indexWhere((n) => n.label == label)),
+        child: _PhoneShell(
+          index: _index,
+          onSelect: (i) => setState(() => _index = i),
+          errorBanner: errorBanner,
+        ),
+      );
+    }
 
     return AdminNav(
       go: (label) => setState(() => _index = _nav.indexWhere((n) => n.label == label)),
@@ -378,12 +387,7 @@ class _AdminShellState extends State<AdminShell> {
           Expanded(
             child: Column(children: [
               topBar,
-              if (admin.error != null && admin.signedIn)
-                MaterialBanner(
-                  backgroundColor: const Color(0xFFFEF2F2),
-                  content: Text(admin.error!, style: const TextStyle(color: AdminColors.danger)),
-                  actions: [TextButton(onPressed: admin.clearError, child: const Text('Dismiss'))],
-                ),
+              ?errorBanner,
               Expanded(child: _nav[_index].page),
             ]),
           ),
@@ -393,22 +397,198 @@ class _AdminShellState extends State<AdminShell> {
   }
 }
 
+Future<void> _publish(BuildContext context, AdminController admin) async {
+  final ok = await admin.publish();
+  if (context.mounted) {
+    showAdminSnack(context, ok ? 'Published. Users see the changes on next open.' : admin.error ?? 'Failed', error: !ok);
+  }
+}
+
+class _StatusPills extends StatelessWidget {
+  const _StatusPills({required this.admin, required this.updated, this.iconsOnly = false});
+
+  final AdminController admin;
+  final DateTime? updated;
+  final bool iconsOnly;
+
+  @override
+  Widget build(BuildContext context) => Row(mainAxisSize: MainAxisSize.min, children: [
+        if (admin.demo)
+          _Pill(icon: Icons.science_outlined, label: 'Demo mode', color: const Color(0xFFEA580C), iconOnly: iconsOnly)
+        else
+          _Pill(
+              icon: Icons.cloud_done_outlined, label: 'Firebase connected', color: AdminColors.success, iconOnly: iconsOnly),
+        const SizedBox(width: 8),
+        if (admin.dirty)
+          _Pill(icon: Icons.edit_note, label: 'Unpublished changes', color: const Color(0xFF2563EB))
+        else
+          _Pill(
+            icon: Icons.check_circle_outline,
+            label: updated == null ? 'Using built-in defaults' : 'Published ${formatDate(updated!.toLocal())}',
+            color: AdminColors.muted,
+          ),
+      ]);
+}
+
+/// Phone layout: top bar with the page name, menu drawer with every
+/// section, and Publish always within reach.
+class _PhoneShell extends StatelessWidget {
+  const _PhoneShell({required this.index, required this.onSelect, this.errorBanner});
+
+  final int index;
+  final ValueChanged<int> onSelect;
+  final Widget? errorBanner;
+
+  @override
+  Widget build(BuildContext context) {
+    final admin = AdminScope.of(context);
+    final updated = admin.published.updatedAt;
+    final name = admin.displayName?.isNotEmpty == true ? admin.displayName! : admin.username;
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.white,
+        elevation: 0,
+        scrolledUnderElevation: 1,
+        titleSpacing: 0,
+        shape: const Border(bottom: BorderSide(color: AdminColors.border)),
+        title: Text(_nav[index].label,
+            maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
+        actions: [
+          if (admin.busy)
+            const Padding(
+              padding: EdgeInsets.only(right: 8),
+              child: SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2.2)),
+            ),
+          Padding(
+            padding: const EdgeInsets.only(right: 4),
+            child: FilledButton(
+              style: FilledButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                minimumSize: const Size(0, 38),
+              ),
+              onPressed: admin.dirty && !admin.busy ? () => _publish(context, admin) : null,
+              child: const Text('Publish'),
+            ),
+          ),
+          PopupMenuButton<String>(
+            tooltip: 'More',
+            onSelected: (v) => switch (v) {
+              'site' => launchSite(),
+              'discard' => admin.discardDraft(),
+              'out' => admin.signOut(),
+              _ => null,
+            },
+            itemBuilder: (_) => [
+              const PopupMenuItem(value: 'site', child: Text('View website')),
+              PopupMenuItem(value: 'discard', enabled: admin.dirty, child: const Text('Discard changes')),
+              const PopupMenuItem(value: 'out', child: Text('Sign out')),
+            ],
+          ),
+        ],
+      ),
+      drawer: Drawer(
+        backgroundColor: AdminColors.sidebar,
+        child: SafeArea(
+          child: Column(children: [
+            const SizedBox(height: 16),
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: 20),
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14)),
+              child: Image.asset('assets/brand/logo.png', height: 36),
+            ),
+            const Padding(
+              padding: EdgeInsets.only(top: 10, bottom: 14),
+              child: Text('ADMIN CONSOLE',
+                  style: TextStyle(color: Color(0xFF94A3B8), fontSize: 11, letterSpacing: 2, fontWeight: FontWeight.w700)),
+            ),
+            Expanded(
+              child: ListView(padding: const EdgeInsets.symmetric(horizontal: 12), children: [
+                for (var i = 0; i < _nav.length; i++)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 2),
+                    child: Material(
+                      color: i == index ? AdminColors.accent : Colors.transparent,
+                      borderRadius: BorderRadius.circular(12),
+                      child: ListTile(
+                        dense: true,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        leading: Icon(_nav[i].icon, color: Colors.white, size: 21),
+                        title: Text(_nav[i].label,
+                            style: TextStyle(
+                                color: Colors.white, fontSize: 14.5, fontWeight: i == index ? FontWeight.w700 : FontWeight.w500)),
+                        onTap: () {
+                          Navigator.pop(context);
+                          onSelect(i);
+                        },
+                      ),
+                    ),
+                  ),
+              ]),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 8, 12),
+              child: Row(children: [
+                CircleAvatar(
+                  radius: 16,
+                  backgroundColor: AdminColors.accent,
+                  child: Text((name.isEmpty ? 'A' : name)[0].toUpperCase(), style: const TextStyle(color: Colors.white)),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(name,
+                      overflow: TextOverflow.ellipsis, style: const TextStyle(color: Color(0xFFCBD5E1), fontSize: 13)),
+                ),
+                IconButton(
+                  tooltip: 'Sign out',
+                  onPressed: admin.signOut,
+                  icon: const Icon(Icons.logout, color: Color(0xFF94A3B8), size: 20),
+                ),
+              ]),
+            ),
+          ]),
+        ),
+      ),
+      body: Column(children: [
+        Container(
+          width: double.infinity,
+          color: Colors.white,
+          padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: _StatusPills(admin: admin, updated: updated),
+          ),
+        ),
+        ?errorBanner,
+        Expanded(child: _nav[index].page),
+      ]),
+    );
+  }
+}
+
 class _Pill extends StatelessWidget {
-  const _Pill({required this.icon, required this.label, required this.color});
+  const _Pill({required this.icon, required this.label, required this.color, this.iconOnly = false});
 
   final IconData icon;
   final String label;
   final Color color;
+  final bool iconOnly;
 
   @override
-  Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-        decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(20)),
-        child: Row(mainAxisSize: MainAxisSize.min, children: [
-          Icon(icon, size: 16, color: color),
-          const SizedBox(width: 6),
-          Text(label, style: TextStyle(color: color, fontWeight: FontWeight.w600, fontSize: 13)),
-        ]),
+  Widget build(BuildContext context) => Tooltip(
+        message: label,
+        child: Container(
+          padding: EdgeInsets.symmetric(horizontal: iconOnly ? 8 : 12, vertical: 7),
+          decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(20)),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            Icon(icon, size: 16, color: color),
+            if (!iconOnly) ...[
+              const SizedBox(width: 6),
+              Text(label, style: TextStyle(color: color, fontWeight: FontWeight.w600, fontSize: 13)),
+            ],
+          ]),
+        ),
       );
 }
 
