@@ -317,3 +317,21 @@ describe('traffic', () => {
     await assertFails(setDoc(doc(db('alice'), 'traffic/2026-11-01/logins/l4'), { ...login, email: 'a@x.com' }));
   });
 });
+
+describe("today's poll", () => {
+  function dayKey(d = new Date()) {
+    const t = new Date(d.getTime() + 330 * 60000);
+    return `${t.getUTCFullYear()}-${String(t.getUTCMonth() + 1).padStart(2, '0')}-${String(t.getUTCDate()).padStart(2, '0')}`;
+  }
+
+  test('one vote per voter, only for today (India date)', async () => {
+    const today = `d-${dayKey()}`;
+    await assertSucceeds(voteBatch(db('alice'), 'alice', today, 's3', 1).commit());
+    await ageRateLimit('alice');
+    await assertFails(voteBatch(db('alice'), 'alice', today, 's4', 0).commit());
+    const yesterday = `d-${dayKey(new Date(Date.now() - 86400000))}`;
+    await assertFails(voteBatch(db('bob'), 'bob', yesterday, 's1', 0).commit());
+    await assertFails(voteBatch(db('carol'), 'carol', today, 'x1', 0).commit());
+    await assertSucceeds(getDoc(doc(env.unauthenticatedContext().firestore(), `tallies/${today}/buckets/s3`)));
+  });
+});

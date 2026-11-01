@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../data/ap_data.dart';
 import '../data/civic.dart';
+import '../data/daily_polls.dart';
 import '../l10n/legal.dart';
 import '../data/featured_polls.dart';
 
@@ -217,6 +218,7 @@ class AppConfig {
     required this.home,
     this.civic = const CivicConfig(),
     this.legal = const {},
+    this.daily = const [],
     this.updatedAt,
     this.updatedBy,
   });
@@ -240,6 +242,9 @@ class AppConfig {
 
   /// Edited policy pages by id (see l10n/legal.dart).
   final Map<String, LegalDoc> legal;
+
+  /// "Today's poll" questions scheduled by date (see data/daily_polls.dart).
+  final List<DailyPoll> daily;
   final DateTime? updatedAt;
   final String? updatedBy;
 
@@ -252,6 +257,7 @@ class AppConfig {
     HomeConfig? home,
     CivicConfig? civic,
     Map<String, LegalDoc>? legal,
+    List<DailyPoll>? daily,
     DateTime? updatedAt,
     String? updatedBy,
   }) =>
@@ -264,6 +270,7 @@ class AppConfig {
         home: home ?? this.home,
         civic: civic ?? this.civic,
         legal: legal ?? this.legal,
+        daily: daily ?? this.daily,
         updatedAt: updatedAt ?? this.updatedAt,
         updatedBy: updatedBy ?? this.updatedBy,
       );
@@ -284,6 +291,7 @@ class AppConfig {
         'home': home.toJson(),
         'civic': civic.toJson(),
         'legal': {for (final e in legal.entries) e.key: e.value.toJson()},
+        'daily': [for (final d in daily) d.toJson()],
         if (updatedAt != null) 'updatedAt': updatedAt!.toIso8601String(),
         if (updatedBy != null) 'updatedBy': updatedBy,
       };
@@ -318,6 +326,10 @@ class AppConfig {
           if (defaultLegalDocs.where((x) => x.id == e.key).firstOrNull case final base?)
             e.key: LegalDoc.fromJson(e.key, map(e.value), base),
       },
+      daily: [
+        for (final d in (j['daily'] as List? ?? const []))
+          if (d is Map) DailyPoll.fromJson(Map<String, dynamic>.from(d)),
+      ],
       updatedAt: DateTime.tryParse(j['updatedAt'] as String? ?? ''),
       updatedBy: _str(j['updatedBy']),
     );
