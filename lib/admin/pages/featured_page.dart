@@ -166,7 +166,7 @@ class _FeaturedEditorState extends State<FeaturedEditor> {
         width: 760,
         child: SingleChildScrollView(
           child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            Row(children: [
+            AdminFieldRow(children: [
               Expanded(
                 child: DropdownButtonFormField<String>(
                   initialValue: _j['kind'] as String,
@@ -232,7 +232,7 @@ class _FeaturedEditorState extends State<FeaturedEditor> {
                   border: Border.all(color: AdminColors.border),
                 ),
                 child: Column(children: [
-                  Row(children: [
+                  AdminFieldRow(children: [
                     Expanded(
                       child: DraftField(
                         key: ValueKey('o$i-en-${_options.length}'),
@@ -256,7 +256,7 @@ class _FeaturedEditorState extends State<FeaturedEditor> {
                     ),
                   ]),
                   const SizedBox(height: 10),
-                  Row(children: [
+                  AdminFieldRow(children: [
                     Expanded(
                       child: DropdownButtonFormField<String?>(
                         initialValue: _options[i]['partyId'] as String?,

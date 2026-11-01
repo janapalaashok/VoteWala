@@ -37,26 +37,86 @@ class AdminPage extends StatelessWidget {
   final List<Widget> children;
 
   @override
-  Widget build(BuildContext context) => ListView(
-        padding: const EdgeInsets.fromLTRB(32, 28, 32, 48),
-        children: [
-          Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Expanded(
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(title,
-                    style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w800, color: AdminColors.ink, letterSpacing: -0.4)),
-                if (subtitle != null) ...[
-                  const SizedBox(height: 6),
-                  Text(subtitle!, style: const TextStyle(color: AdminColors.muted, fontSize: 14.5)),
-                ],
-              ]),
-            ),
-            ...actions,
-          ]),
-          const SizedBox(height: 24),
-          ...children,
-        ],
-      );
+  Widget build(BuildContext context) {
+    final phone = isAdminPhone(context);
+    final heading = Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Text(title,
+          style: TextStyle(
+              fontSize: phone ? 22 : 26, fontWeight: FontWeight.w800, color: AdminColors.ink, letterSpacing: -0.4)),
+      if (subtitle != null) ...[
+        const SizedBox(height: 6),
+        Text(subtitle!, style: TextStyle(color: AdminColors.muted, fontSize: phone ? 13.5 : 14.5)),
+      ],
+    ]);
+    return ListView(
+      padding: phone ? const EdgeInsets.fromLTRB(14, 16, 14, 40) : const EdgeInsets.fromLTRB(32, 28, 32, 48),
+      children: [
+        if (phone) ...[
+          heading,
+          if (actions.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Wrap(spacing: 8, runSpacing: 8, crossAxisAlignment: WrapCrossAlignment.center, children: actions),
+          ],
+        ] else
+          Row(crossAxisAlignment: CrossAxisAlignment.start, children: [Expanded(child: heading), ...actions]),
+        SizedBox(height: phone ? 16 : 24),
+        ...children,
+      ],
+    );
+  }
+}
+
+/// Phones: the admin console fits the screen width.
+bool isAdminPhone(BuildContext context) => MediaQuery.sizeOf(context).width < 720;
+
+class _CardHeader extends StatelessWidget {
+  const _CardHeader({required this.title, this.subtitle, this.trailing});
+
+  final String title;
+  final String? subtitle;
+  final Widget? trailing;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Text(title, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: AdminColors.ink)),
+      if (subtitle != null)
+        Padding(
+          padding: const EdgeInsets.only(top: 4),
+          child: Text(subtitle!, style: const TextStyle(color: AdminColors.muted, fontSize: 13)),
+        ),
+    ]);
+    // Phones: a wide button or field next to the title would squeeze it, so
+    // it goes underneath (small icons stay on the right).
+    final t = trailing;
+    if (t != null && isAdminPhone(context) && t is! Icon && t is! IconButton) {
+      return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        text,
+        const SizedBox(height: 12),
+        t,
+      ]);
+    }
+    return Row(children: [Expanded(child: text), ?t]);
+  }
+}
+
+/// Fields side by side on wide screens, one under the other on phones.
+/// Children may be Expanded (as in a Row); gaps are added automatically.
+class AdminFieldRow extends StatelessWidget {
+  const AdminFieldRow({super.key, required this.children});
+
+  final List<Widget> children;
+
+  static bool _isGap(Widget w) => w is SizedBox && w.child == null && w.height == null;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!isAdminPhone(context)) return Row(children: children);
+    final items = [for (final w in children) if (!_isGap(w)) w is Expanded ? w.child : w];
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      for (var i = 0; i < items.length; i++) ...[if (i > 0) const SizedBox(height: 12), items[i]],
+    ]);
+  }
 }
 
 class AdminCard extends StatelessWidget {
@@ -77,22 +137,10 @@ class AdminCard extends StatelessWidget {
           border: Border.all(color: AdminColors.border),
           boxShadow: const [BoxShadow(color: Color(0x0A0F172A), blurRadius: 24, offset: Offset(0, 8))],
         ),
-        padding: EdgeInsets.all(padding),
+        padding: EdgeInsets.all(isAdminPhone(context) ? (padding > 16 ? 16 : padding) : padding),
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           if (title != null) ...[
-            Row(children: [
-              Expanded(
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text(title!, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: AdminColors.ink)),
-                  if (subtitle != null)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 4),
-                      child: Text(subtitle!, style: const TextStyle(color: AdminColors.muted, fontSize: 13)),
-                    ),
-                ]),
-              ),
-              ?trailing,
-            ]),
+            _CardHeader(title: title!, subtitle: subtitle, trailing: trailing),
             const SizedBox(height: 18),
           ],
           child,

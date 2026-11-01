@@ -99,12 +99,12 @@ class _CivicSettingsPageState extends State<CivicSettingsPage> {
           ),
           child: Wrap(spacing: 18, runSpacing: 14, children: [
             SizedBox(
-              width: 180,
+              width: isAdminPhone(context) ? double.infinity : 180,
               child: TextField(controller: _default, decoration: const InputDecoration(labelText: 'Default')),
             ),
             for (final cat in c.categories)
               SizedBox(
-                width: 180,
+                width: isAdminPhone(context) ? double.infinity : 180,
                 child: TextField(
                   controller: _slot(cat.slot),
                   decoration: InputDecoration(labelText: cat.en, hintText: 'Default'),
