@@ -1,0 +1,19 @@
+name: Check image uploads
+
+# Diagnoses admin image uploads (bucket, files, CORS, rules access, config
+# image addresses). Changes nothing.
+on:
+  workflow_dispatch:
+  push:
+    paths: [tools/check_storage.py, .github/workflows/check-storage.yml]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          pip install google-auth requests
+          python3 tools/check_storage.py

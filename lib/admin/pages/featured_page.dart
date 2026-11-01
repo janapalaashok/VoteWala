@@ -1,3 +1,4 @@
+import '../../widgets/common.dart' show webImages;
 import 'package:flutter/material.dart';
 
 import '../../data/featured_polls.dart';
@@ -107,7 +108,7 @@ class FeaturedPage extends StatelessWidget {
                 for (final o in polls[i].options)
                   Chip(
                     avatar: o.photoUrl != null
-                        ? CircleAvatar(backgroundImage: NetworkImage(o.photoUrl!))
+                        ? ClipOval(child: Image.network(o.photoUrl!, width: 24, height: 24, fit: BoxFit.cover, webHtmlElementStrategy: webImages))
                         : (o.icon != null ? Icon(o.icon, size: 18) : null),
                     label: Text(o.en),
                   ),
@@ -291,7 +292,9 @@ class _FeaturedEditorState extends State<FeaturedEditor> {
                         if (u != null) setState(() => _options[i] = {..._options[i], 'photoUrl': u});
                       },
                       icon: _options[i]['photoUrl'] != null
-                          ? CircleAvatar(radius: 12, backgroundImage: NetworkImage(_options[i]['photoUrl'] as String))
+                          ? ClipOval(
+                              child: Image.network(_options[i]['photoUrl'] as String,
+                                  width: 24, height: 24, fit: BoxFit.cover, webHtmlElementStrategy: webImages))
                           : const Icon(Icons.add_a_photo_outlined, size: 18),
                       label: Text(_options[i]['photoUrl'] != null ? 'Change photo' : 'Photo'),
                     ),

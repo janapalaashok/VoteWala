@@ -1,3 +1,4 @@
+import '../../widgets/common.dart' show webImages;
 import 'package:flutter/material.dart';
 
 import '../../config/app_config.dart';
@@ -103,7 +104,7 @@ class _Preview extends StatelessWidget {
     final b = branding;
     final logo = b.logoUrl == null
         ? Image.asset('assets/brand/logo.png', height: 34)
-        : Image.network(b.logoUrl!, height: 34, errorBuilder: (_, _, _) => Image.asset('assets/brand/logo.png', height: 34));
+        : Image.network(b.logoUrl!, height: 34, webHtmlElementStrategy: webImages, errorBuilder: (_, _, _) => Image.asset('assets/brand/logo.png', height: 34));
     return Column(children: [
       const Text('LIVE PREVIEW', style: TextStyle(letterSpacing: 2, fontSize: 11, fontWeight: FontWeight.w700, color: AdminColors.muted)),
       const SizedBox(height: 12),
