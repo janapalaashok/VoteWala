@@ -217,7 +217,10 @@ class FirebaseRest {
     }
     if (r.statusCode != 200) {
       throw FirebaseException(switch (r.statusCode) {
-        403 => 'Upload not allowed for this account (check storage.rules)',
+        403 => 'Upload blocked by Firebase Storage. The site owner must allow Storage to read the admin list once: '
+            'Firebase console -> Storage -> Rules (accept the "grant access to Cloud Firestore" prompt), or '
+            'Google Cloud -> IAM -> service-596383314349@gcp-sa-firebasestorage.iam.gserviceaccount.com -> add role '
+            '"Firebase Rules Firestore Service Agent". Until then use "Paste URL".',
         400 || 404 || 412 => notEnabled,
         _ => 'Upload failed (${r.statusCode})',
       });

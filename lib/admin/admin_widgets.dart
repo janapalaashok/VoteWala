@@ -1,3 +1,4 @@
+import '../widgets/common.dart' show webImages;
 import 'package:flutter/material.dart';
 
 import '../data/ap_data.dart';
@@ -299,7 +300,7 @@ class ImageField extends StatelessWidget {
         clipBehavior: Clip.antiAlias,
         child: url == null
             ? (fallback ?? const Icon(Icons.image_outlined, color: AdminColors.muted))
-            : Image.network(url!, fit: BoxFit.contain, errorBuilder: (_, _, _) => const Icon(Icons.broken_image_outlined)),
+            : Image.network(url!, fit: BoxFit.contain, webHtmlElementStrategy: webImages, errorBuilder: (_, _, _) => const Icon(Icons.broken_image_outlined)),
       ),
       const SizedBox(width: 16),
       Expanded(

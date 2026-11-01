@@ -13,6 +13,11 @@ import 'share_card.dart';
 bool isWide(BuildContext context) => MediaQuery.sizeOf(context).width >= 900;
 
 /// Desktop website layout (wide browser window).
+/// Photos pasted from other websites often lack CORS headers, which the web
+/// renderer needs to draw them; such images are shown as plain <img>
+/// elements instead of failing.
+const webImages = WebHtmlElementStrategy.fallback;
+
 bool desktopLayout(BuildContext context) => kIsWeb && isWide(context);
 
 /// Centers content and caps its width; on the desktop website pages get
@@ -155,7 +160,8 @@ class VoteWalaLogo extends StatelessWidget {
   static Widget _image(String asset, String? url, {double? height, double? width}) {
     final fallback = Image.asset(asset, height: height, width: width, semanticLabel: 'VoteWala');
     if (url == null) return fallback;
-    return Image.network(url, height: height, width: width, errorBuilder: (_, _, _) => fallback);
+    return Image.network(url,
+        height: height, width: width, webHtmlElementStrategy: webImages, errorBuilder: (_, _, _) => fallback);
   }
 
   @override
@@ -335,6 +341,7 @@ class PersonAvatar extends StatelessWidget {
             : Image.network(
                 photoUrl!,
                 headers: imageHeaders,
+                webHtmlElementStrategy: webImages,
                 fit: BoxFit.cover,
                 alignment: Alignment.topCenter,
                 errorBuilder: (_, _, _) => fallback,

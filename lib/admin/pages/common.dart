@@ -1,3 +1,4 @@
+import '../../widgets/common.dart' show webImages;
 import 'package:flutter/material.dart';
 
 import '../../config/app_config.dart';
@@ -45,7 +46,8 @@ class DraftAvatar extends StatelessWidget {
       alignment: Alignment.center,
       child: url == null
           ? initials
-          : Image.network(url!, fit: BoxFit.cover, width: size, height: size, errorBuilder: (_, _, _) => initials),
+          : Image.network(url!,
+              fit: BoxFit.cover, width: size, height: size, webHtmlElementStrategy: webImages, errorBuilder: (_, _, _) => initials),
     );
   }
 }

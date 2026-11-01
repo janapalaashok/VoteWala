@@ -12,3 +12,4 @@
 2026-11-01 app code always fresh (no stale admin/site after a release)
 2026-11-01 clean page addresses (votewala.in/results, /c/..., /admin)
 2026-11-01 mobile-friendly admin console
+2026-11-01 images from any site show; clearer upload errors
