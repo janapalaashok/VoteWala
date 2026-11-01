@@ -1,3 +1,5 @@
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
 
 import '../data/daily_polls.dart';
@@ -26,8 +28,12 @@ Future<void> showDailyPollPopup(BuildContext context, DailyPoll poll) async {
   final outcome = await showDialog<VoteOutcome>(
     context: context,
     barrierDismissible: false,
-    barrierColor: Colors.black.withValues(alpha: 0.6),
-    builder: (_) => DailyPollDialog(poll: poll),
+    barrierColor: Colors.black.withValues(alpha: 0.45),
+    // The whole site behind the popup is blurred.
+    builder: (_) => BackdropFilter(
+      filter: ui.ImageFilter.blur(sigmaX: 6, sigmaY: 6),
+      child: DailyPollDialog(poll: poll),
+    ),
   );
   if (outcome == null || !context.mounted) return;
   for (final badge in outcome.newBadges) {
