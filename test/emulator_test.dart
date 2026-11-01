@@ -10,6 +10,7 @@ import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
+import 'package:votewala/widgets/election_lock.dart';
 import 'package:votewala/config/firebase_rest.dart';
 import 'package:votewala/data/poll_month.dart';
 import 'package:votewala/services/firestore_client.dart';
@@ -46,6 +47,7 @@ VoteService service(String uid) => VoteService(
     );
 
 void main() {
+  electionCodeForceOff = true; // voting screens are tested as after the election code
   setUpAll(() async {
     if (host == null) return;
     final rules = await File('firestore.rules').readAsString();

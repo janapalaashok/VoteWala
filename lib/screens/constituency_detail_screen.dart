@@ -1,3 +1,4 @@
+import '../widgets/election_lock.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -22,7 +23,9 @@ class ConstituencyDetailScreen extends StatelessWidget {
   final int initialTab;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => ElectionLock(page: true, child: _unlockedBuild(context));
+
+  Widget _unlockedBuild(BuildContext context) {
     final c = constituency;
     final te = context.isTelugu;
     final snapshot = AppScope.of(context).snapshot(c);
