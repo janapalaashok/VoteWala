@@ -4,7 +4,6 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:votewala/widgets/election_lock.dart';
 import 'package:votewala/config/app_config.dart';
 import 'package:votewala/config/config_service.dart';
 import 'package:votewala/data/ap_data.dart';
@@ -21,7 +20,6 @@ import 'package:votewala/widgets/share_card.dart';
 import 'package:votewala/utils.dart';
 
 void main() {
-  electionCodeForceOff = true; // voting screens are tested as after the election code
   group('AP data', () {
     test('has 175 assembly and 25 parliament constituencies', () {
       expect(ApData.mla, hasLength(175));

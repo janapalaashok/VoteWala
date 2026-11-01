@@ -8,7 +8,6 @@ import '../state/deep_link.dart';
 import '../state/url_sync.dart';
 import '../widgets/common.dart';
 import '../widgets/daily_poll.dart';
-import '../widgets/election_lock.dart';
 import 'constituency_list_screen.dart';
 import 'desktop/desktop_home.dart';
 import 'desktop/desktop_pages.dart';
@@ -64,8 +63,7 @@ class _MainShellState extends State<MainShell> {
       await showDailyPollPopup(context, poll);
       // Not answered (e.g. answered elsewhere and the popup closed): ask
       // again only after the next change.
-      // During the election code it is shown once per visit (voting is closed).
-      if (mounted) _dailyShown = electionCodeActive || !state.dailyPending;
+      if (mounted) _dailyShown = !state.dailyPending;
     });
   }
 

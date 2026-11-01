@@ -1,4 +1,3 @@
-import '../widgets/election_lock.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -45,9 +44,7 @@ class _LiveResultsScreenState extends State<LiveResultsScreen> {
   }
 
   @override
-  Widget build(BuildContext context) => ElectionLock(page: true, child: _unlockedBuild(context));
-
-  Widget _unlockedBuild(BuildContext context) {
+  Widget build(BuildContext context) {
     final c = widget.constituency;
     final te = context.isTelugu;
     final snapshot = AppScope.of(context).snapshot(c);

@@ -8,7 +8,6 @@ import '../services/vote_service.dart';
 import '../state/app_state.dart';
 import '../theme.dart';
 import 'common.dart';
-import 'election_lock.dart';
 import 'vote_flow.dart';
 
 const _palette = [
@@ -112,11 +111,7 @@ class _DailyPollDialogState extends State<DailyPollDialog> {
           constraints: const BoxConstraints(maxWidth: 520),
           child: AnimatedSize(
             duration: const Duration(milliseconds: 250),
-            child: _done
-                ? _thanks(context, te)
-                : electionCodeActive
-                    ? _paused(context, te, poll)
-                    : _question(context, te, poll),
+            child: _done ? _thanks(context, te) : _question(context, te, poll),
           ),
         ),
       ),
@@ -230,31 +225,6 @@ class _DailyPollDialogState extends State<DailyPollDialog> {
       ],
     ),
   );
-
-  /// Election code: the poll card blurred, the notice on top, and a way out
-  /// (voting is not possible, so the popup must not trap the visitor).
-  Widget _paused(BuildContext context, bool te, DailyPoll poll) => Stack(children: [
-        IgnorePointer(
-          child: ExcludeSemantics(
-            child: ImageFiltered(
-              imageFilter: ui.ImageFilter.blur(sigmaX: 7, sigmaY: 7, tileMode: TileMode.decal),
-              child: _question(context, te, poll),
-            ),
-          ),
-        ),
-        Positioned.fill(
-          child: Container(
-            color: Colors.white.withValues(alpha: 0.3),
-            alignment: Alignment.center,
-            padding: const EdgeInsets.all(16),
-            child: SingleChildScrollView(
-              child: ElectionCodeNotice(
-                action: FilledButton(onPressed: () => Navigator.of(context).pop(), child: Text(context.tr('ok'))),
-              ),
-            ),
-          ),
-        ),
-      ]);
 
   Widget _thanks(BuildContext context, bool te) => Padding(
     padding: const EdgeInsets.fromLTRB(28, 34, 28, 34),
