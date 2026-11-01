@@ -10,6 +10,7 @@ import '../state/app_state.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
 import '../widgets/daily_poll.dart';
+import '../widgets/election_lock.dart';
 import '../widgets/painters.dart';
 import 'ap_map_screen.dart';
 import 'browse_screens.dart';
@@ -48,6 +49,8 @@ class HomeScreen extends StatelessWidget {
                 if (AppScope.of(context).blocked) const BlockedBanner(),
                 _Hero(onSearch: () => push(const SearchScreen())),
                 const SizedBox(height: 16),
+                ElectionLock(
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
                 Row(children: [
                   Expanded(
                     child: _PollTypeCard(
@@ -102,8 +105,12 @@ class HomeScreen extends StatelessWidget {
                 ],
                 const DailyPollSection(),
                 const SizedBox(height: 8),
+                  ]),
+                ),
                 const YourConstituencyCard(),
                 const SizedBox(height: 8),
+                ElectionLock(
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
                 if (home.showTopSeats) ...[
                   SectionHeader(context.tr('topMlaSeats'),
                       action: context.tr('viewAll'), onAction: () => shell?.go(ShellTab.mla)),
@@ -122,6 +129,8 @@ class HomeScreen extends StatelessWidget {
                   ),
                   const _FeaturedPolls(),
                 ],
+                  ]),
+                ),
               ]),
             ),
           ],
