@@ -1,4 +1,3 @@
-import '../widgets/election_lock.dart';
 import 'package:flutter/material.dart';
 
 import '../data/ap_data.dart';
@@ -83,9 +82,7 @@ class _ResultsScreenState extends State<ResultsScreen> {
   PollMonth _month = PollMonth.current();
 
   @override
-  Widget build(BuildContext context) => ElectionLock(page: true, child: _unlockedBuild(context));
-
-  Widget _unlockedBuild(BuildContext context) {
+  Widget build(BuildContext context) {
     final state = AppScope.of(context);
     final te = context.isTelugu;
     final tally = SeatTally(state.snapshots(_type, month: _month));

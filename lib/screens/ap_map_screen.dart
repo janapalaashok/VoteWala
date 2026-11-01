@@ -1,4 +1,3 @@
-import '../widgets/election_lock.dart';
 import 'package:flutter/material.dart';
 
 import '../data/ap_data.dart';
@@ -66,9 +65,7 @@ class _ApMapScreenState extends State<ApMapScreen> {
       ));
 
   @override
-  Widget build(BuildContext context) => ElectionLock(page: true, child: _unlockedBuild(context));
-
-  Widget _unlockedBuild(BuildContext context) {
+  Widget build(BuildContext context) {
     final state = AppScope.of(context);
     final te = context.isTelugu;
     final summaries = {for (final d in ApData.districts) d.id: state.districtSummary(d, _type, month: _month)};

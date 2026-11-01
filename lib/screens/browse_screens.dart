@@ -1,4 +1,3 @@
-import '../widgets/election_lock.dart';
 import 'package:flutter/material.dart';
 
 import '../data/ap_data.dart';
@@ -98,9 +97,7 @@ class _LivePollsScreenState extends State<LivePollsScreen> {
   ElectionType _type = ElectionType.mla;
 
   @override
-  Widget build(BuildContext context) => ElectionLock(page: true, child: _unlockedBuild(context));
-
-  Widget _unlockedBuild(BuildContext context) {
+  Widget build(BuildContext context) {
     final state = AppScope.of(context);
     final polls = state.snapshots(_type)..sort((a, b) => b.total.compareTo(a.total));
     return Scaffold(
@@ -143,9 +140,7 @@ class _CandidatesDirectoryScreenState extends State<CandidatesDirectoryScreen> {
   String _query = '';
 
   @override
-  Widget build(BuildContext context) => ElectionLock(page: true, child: _unlockedBuild(context));
-
-  Widget _unlockedBuild(BuildContext context) {
+  Widget build(BuildContext context) {
     final list = [
       for (final c in ApData.of(_type))
         if (c.matches(_query))

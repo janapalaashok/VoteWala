@@ -1,4 +1,3 @@
-import '../widgets/election_lock.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -22,9 +21,7 @@ class CandidateDetailScreen extends StatelessWidget {
   Future<void> _open(String url) => launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
 
   @override
-  Widget build(BuildContext context) => ElectionLock(page: true, child: _unlockedBuild(context));
-
-  Widget _unlockedBuild(BuildContext context) {
+  Widget build(BuildContext context) {
     final cand = candidate;
     final c = cand.constituency;
     final te = context.isTelugu;

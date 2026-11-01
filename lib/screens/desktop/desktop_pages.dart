@@ -1,4 +1,3 @@
-import '../../widgets/election_lock.dart';
 import 'package:flutter/material.dart';
 
 import '../../data/external_data.dart';
@@ -91,9 +90,7 @@ class _DesktopConstituenciesState extends State<DesktopConstituencies> {
   String? _district;
 
   @override
-  Widget build(BuildContext context) => ElectionLock(page: true, child: _unlockedBuild(context));
-
-  Widget _unlockedBuild(BuildContext context) {
+  Widget build(BuildContext context) {
     final state = AppScope.of(context);
     final te = context.isTelugu;
     final mla = widget.type == ElectionType.mla;
@@ -295,9 +292,7 @@ class _DesktopResultsState extends State<DesktopResults> {
   String _query = '';
 
   @override
-  Widget build(BuildContext context) => ElectionLock(page: true, child: _unlockedBuild(context));
-
-  Widget _unlockedBuild(BuildContext context) {
+  Widget build(BuildContext context) {
     final state = AppScope.of(context);
     final te = context.isTelugu;
     final snaps = state.snapshots(_type, month: _month);

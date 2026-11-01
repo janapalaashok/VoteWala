@@ -14,7 +14,6 @@ import '../../utils.dart';
 import '../../widgets/common.dart';
 import '../../widgets/painters.dart';
 import '../../widgets/daily_poll.dart';
-import '../../widgets/election_lock.dart';
 import '../ap_map_screen.dart';
 import '../browse_screens.dart';
 import '../main_shell.dart';
@@ -43,12 +42,10 @@ class DesktopHome extends StatelessWidget {
       if (state.blocked) const _Section(top: 20, child: BlockedBanner()),
       _Section(
         top: 28,
-        locked: true,
         child: _Hero(tally: mlaTally, month: month),
       ),
       _Section(
         top: 28,
-        locked: true,
         child: Row(children: [
           _Metric(icon: Icons.account_balance, value: '175', label: context.tr('mlaConstituencies'), color: AppColors.orange),
           const SizedBox(width: 18),
@@ -69,11 +66,10 @@ class DesktopHome extends StatelessWidget {
           ),
         ]),
       ),
-      const _Section(top: 20, locked: true, child: DailyPollSection()),
+      const _Section(top: 20, child: DailyPollSection()),
       const _Section(top: 28, child: YourConstituencyCard()),
       if (home.showFeatured && (featuredPolls.isNotEmpty || closedFeaturedPolls.isNotEmpty))
         _Section(
-          locked: true,
           title: context.tr('featuredPolls'),
           subtitle: month.label(context.isTelugu),
           action: closedFeaturedPolls.isEmpty
@@ -87,7 +83,6 @@ class DesktopHome extends StatelessWidget {
         ),
       if (home.showTopSeats)
         _Section(
-          locked: true,
           title: context.tr('topSeats'),
           child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Expanded(
@@ -102,7 +97,6 @@ class DesktopHome extends StatelessWidget {
           ]),
         ),
       _Section(
-        locked: true,
         title: context.tr('districtWise'),
         subtitle: month.label(context.isTelugu),
         action: TextButton.icon(
@@ -125,10 +119,8 @@ class DesktopHome extends StatelessWidget {
 }
 
 class _Section extends StatelessWidget {
-  const _Section({required this.child, this.title, this.subtitle, this.action, this.top = 56, this.locked = false});
+  const _Section({required this.child, this.title, this.subtitle, this.action, this.top = 56});
 
-  /// Election-related: blurred while the election code is in force.
-  final bool locked;
   final Widget child;
   final String? title;
   final String? subtitle;
@@ -159,7 +151,7 @@ class _Section extends StatelessWidget {
                 ]),
                 const SizedBox(height: 22),
               ],
-              if (locked) ElectionLock(child: child) else child,
+              child,
             ]),
           ),
         ),

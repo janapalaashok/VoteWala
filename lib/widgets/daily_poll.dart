@@ -1,5 +1,3 @@
-import 'dart:ui' as ui;
-
 import 'package:flutter/material.dart';
 
 import '../data/daily_polls.dart';
@@ -8,7 +6,6 @@ import '../services/vote_service.dart';
 import '../state/app_state.dart';
 import '../theme.dart';
 import 'common.dart';
-import 'election_lock.dart';
 import 'vote_flow.dart';
 
 const _palette = [
@@ -29,12 +26,8 @@ Future<void> showDailyPollPopup(BuildContext context, DailyPoll poll) async {
   final outcome = await showDialog<VoteOutcome>(
     context: context,
     barrierDismissible: false,
-    barrierColor: Colors.black.withValues(alpha: 0.45),
-    // The whole site behind the popup is blurred.
-    builder: (_) => BackdropFilter(
-      filter: ui.ImageFilter.blur(sigmaX: 6, sigmaY: 6),
-      child: DailyPollDialog(poll: poll),
-    ),
+    barrierColor: Colors.black.withValues(alpha: 0.6),
+    builder: (_) => DailyPollDialog(poll: poll),
   );
   if (outcome == null || !context.mounted) return;
   for (final badge in outcome.newBadges) {
@@ -112,11 +105,7 @@ class _DailyPollDialogState extends State<DailyPollDialog> {
           constraints: const BoxConstraints(maxWidth: 520),
           child: AnimatedSize(
             duration: const Duration(milliseconds: 250),
-            child: _done
-                ? _thanks(context, te)
-                : electionCodeActive
-                    ? _paused(context, te, poll)
-                    : _question(context, te, poll),
+            child: _done ? _thanks(context, te) : _question(context, te, poll),
           ),
         ),
       ),
@@ -230,31 +219,6 @@ class _DailyPollDialogState extends State<DailyPollDialog> {
       ],
     ),
   );
-
-  /// Election code: the poll card blurred, the notice on top, and a way out
-  /// (voting is not possible, so the popup must not trap the visitor).
-  Widget _paused(BuildContext context, bool te, DailyPoll poll) => Stack(children: [
-        IgnorePointer(
-          child: ExcludeSemantics(
-            child: ImageFiltered(
-              imageFilter: ui.ImageFilter.blur(sigmaX: 7, sigmaY: 7, tileMode: TileMode.decal),
-              child: _question(context, te, poll),
-            ),
-          ),
-        ),
-        Positioned.fill(
-          child: Container(
-            color: Colors.white.withValues(alpha: 0.3),
-            alignment: Alignment.center,
-            padding: const EdgeInsets.all(16),
-            child: SingleChildScrollView(
-              child: ElectionCodeNotice(
-                action: FilledButton(onPressed: () => Navigator.of(context).pop(), child: Text(context.tr('ok'))),
-              ),
-            ),
-          ),
-        ),
-      ]);
 
   Widget _thanks(BuildContext context, bool te) => Padding(
     padding: const EdgeInsets.fromLTRB(28, 34, 28, 34),

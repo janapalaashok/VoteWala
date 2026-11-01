@@ -1,4 +1,3 @@
-import '../widgets/election_lock.dart';
 import 'package:flutter/material.dart';
 
 import '../data/ap_data.dart';
@@ -27,9 +26,7 @@ class _ConstituencyListScreenState extends State<ConstituencyListScreen> {
   late String? _districtId = widget.districtId;
 
   @override
-  Widget build(BuildContext context) => ElectionLock(page: true, child: _unlockedBuild(context));
-
-  Widget _unlockedBuild(BuildContext context) {
+  Widget build(BuildContext context) {
     final state = AppScope.of(context);
     final te = context.isTelugu;
     final all = ApData.of(widget.type);
