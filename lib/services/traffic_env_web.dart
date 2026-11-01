@@ -26,7 +26,7 @@ TrafficEnv readTrafficEnv() {
     referrer: web.document.referrer,
     timeZone: tz,
     language: web.window.navigator.language,
-    landing: uri.fragment,
+    landing: uri.fragment.startsWith('/') ? uri.fragment : uri.path,
     query: uri.queryParameters,
   );
 }

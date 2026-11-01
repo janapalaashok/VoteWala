@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_web_plugins/url_strategy.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'admin/admin_app.dart';
@@ -18,6 +19,7 @@ import 'services/vote_service.dart';
 import 'screens/welcome_screen.dart';
 import 'state/app_state.dart';
 import 'state/deep_link.dart';
+import 'state/url_sync.dart';
 import 'theme.dart';
 
 /// flutter build web --dart-define=VOTEWALA_DEMO=true: offline UI review.
@@ -27,9 +29,12 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final prefs = await SharedPreferences.getInstance();
   await ConfigService.instance.init(prefs);
-  // The admin panel is part of the website only: https://<site>/#/admin
-  if (kIsWeb) DeepLink.parse(Uri.base.fragment);
-  if (kIsWeb && Uri.base.fragment.startsWith('/admin')) {
+  // Clean page addresses (votewala.in/results); older #/ links still work.
+  usePathUrlStrategy();
+  final path = kIsWeb ? startPath(Uri.base) : '/';
+  // The admin panel is part of the website only: https://<site>/admin
+  if (kIsWeb) DeepLink.parse(path);
+  if (kIsWeb && (path == '/admin' || path.startsWith('/admin/'))) {
     runApp(AdminApp(prefs: prefs));
     return;
   }
@@ -75,8 +80,16 @@ class VoteWalaApp extends StatelessWidget {
   Widget _app(BuildContext context) {
     final legalDoc = legalById(DeepLink.legal.value ?? '');
     appLinkHome = () => DeepLink.legal.value = null;
+    // Address shown under all pages; the main screen sets its tab's address.
+    if (legalDoc != null) {
+      UrlSync.instance.setRoot('/legal/${legalDoc.id}');
+    } else if (state.user == null || !state.user!.emailVerified) {
+      UrlSync.instance.setRoot('/');
+    }
     return MaterialApp(
       title: appConfig.branding.appName,
+      initialRoute: '/',
+      navigatorObservers: [UrlSync.instance],
       debugShowCheckedModeBanner: false,
       theme: buildTheme(),
       locale: Locale(state.language),

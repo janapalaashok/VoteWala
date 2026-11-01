@@ -17,10 +17,10 @@ address in `hosting/SITE_URL` so share links and QR codes point to votewala.in.
 ## Done
 - Website, mobile website and Android app with Google + email sign-in, one vote
   per person per poll enforced by the database rules.
-- Admin panel at `/#/admin`: content, polls, candidates, local issues, photo
+- Admin panel at `/admin`: content, polls, candidates, local issues, photo
   review, grievances + PDF, analytics, users (block / unblock), admins, legal
   pages, settings, profile and password.
-- Legal pages with public addresses (`/#/legal/privacy`, `/#/legal/terms`, ...).
+- Legal pages with public addresses (`/legal/privacy`, `/legal/terms`, ...).
 - Link previews (title, description, image) for WhatsApp, Facebook, X.
 - votewala.in connected on the Firebase side and allowed for sign-in.
 - Daily database backup to a private bucket (30 days kept).
@@ -38,12 +38,12 @@ address in `hosting/SITE_URL` so share links and QR codes point to votewala.in.
 
    SSL is issued automatically, usually within 1–24 hours. Check with
    Actions → "Connect domain" → Run workflow (prints the status).
-2. **Admin password**: sign in at https://votewala.in/#/admin with `admin` and
+2. **Admin password**: sign in at https://votewala.in/admin with `admin` and
    the starting password, set your own password, then add other admins
    (Admins page) instead of sharing yours.
 3. **Google sign-in screen** (Google Cloud → APIs & Services → OAuth consent
    screen / Branding): set the home page `https://votewala.in`, privacy policy
-   `https://votewala.in/#/legal/privacy`, terms `https://votewala.in/#/legal/terms`,
+   `https://votewala.in/legal/privacy`, terms `https://votewala.in/legal/terms`,
    and add `votewala.in` under Authorized domains.
 4. **Email templates** (Firebase → Authentication → Templates): sender name
    "VoteWala", reply-to `contact@votewala.in`.

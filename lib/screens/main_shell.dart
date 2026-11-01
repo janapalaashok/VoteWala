@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../data/ap_data.dart';
 import '../l10n/strings.dart';
 import '../state/deep_link.dart';
+import '../state/url_sync.dart';
 import '../widgets/common.dart';
 import 'constituency_list_screen.dart';
 import 'desktop/desktop_home.dart';
@@ -38,11 +39,18 @@ class MainShell extends StatefulWidget {
 }
 
 class _MainShellState extends State<MainShell> {
-  int _index = 0;
+  late int _index = DeepLink.takeTab() ?? 0;
+
+  /// Shows tab [i]; the browser address follows (/, /mla, /mp, /results, /profile).
+  void _go(int i) {
+    setState(() => _index = i);
+    UrlSync.instance.setRoot(UrlSync.tabPaths[i]);
+  }
 
   @override
   void initState() {
     super.initState();
+    UrlSync.instance.setRoot(UrlSync.tabPaths[_index]);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) DeepLink.openPending(context);
     });
@@ -66,16 +74,16 @@ class _MainShellState extends State<MainShell> {
       (Icons.person_outline, Icons.person, context.tr('profile')),
     ];
     final body = ShellScope(
-      go: (i) => setState(() => _index = i),
+      go: _go,
       child: IndexedStack(index: _index, children: _pages),
     );
 
     if (kIsWeb && isWide(context)) {
       return ShellScope(
-        go: (i) => setState(() => _index = i),
+        go: _go,
         child: DesktopShell(
           index: _index,
-          onSelect: (i) => setState(() => _index = i),
+          onSelect: _go,
           body: IndexedStack(index: _index, children: const [
             DesktopHome(),
             DesktopConstituencies(type: ElectionType.mla),
@@ -93,7 +101,7 @@ class _MainShellState extends State<MainShell> {
           NavigationRail(
             extended: extended,
             selectedIndex: _index,
-            onDestinationSelected: (i) => setState(() => _index = i),
+            onDestinationSelected: _go,
             labelType: extended ? NavigationRailLabelType.none : NavigationRailLabelType.all,
             leading: Padding(
               padding: const EdgeInsets.symmetric(vertical: 16),
@@ -113,7 +121,7 @@ class _MainShellState extends State<MainShell> {
       body: body,
       bottomNavigationBar: NavigationBar(
         selectedIndex: _index,
-        onDestinationSelected: (i) => setState(() => _index = i),
+        onDestinationSelected: _go,
         destinations: [
           for (final it in items) NavigationDestination(icon: Icon(it.$1), selectedIcon: Icon(it.$2), label: it.$3),
         ],

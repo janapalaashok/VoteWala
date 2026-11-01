@@ -41,7 +41,7 @@ class _AdminsPageState extends State<AdminsPage> {
           content: SizedBox(
             width: 420,
             child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-              const Text('They sign in at /#/admin with this username and the temporary password, and must set '
+              const Text('They sign in at votewala.in/admin with this username and the temporary password, and must set '
                   'their own password on the first sign-in.',
                   style: TextStyle(color: AdminColors.muted, fontSize: 13)),
               const SizedBox(height: 14),
@@ -332,7 +332,7 @@ class _LegalPagesPageState extends State<LegalPagesPage> {
         const SizedBox(height: 20),
         AdminCard(
           title: 'Page',
-          subtitle: 'Address: /#/legal/$_id',
+          subtitle: 'Address: /legal/$_id',
           child: Column(children: [
             DraftField(
               key: ValueKey('title-en-$_id'),
