@@ -13,6 +13,7 @@ import '../../theme.dart';
 import '../../utils.dart';
 import '../../widgets/common.dart';
 import '../../widgets/painters.dart';
+import '../../widgets/daily_poll.dart';
 import '../ap_map_screen.dart';
 import '../browse_screens.dart';
 import '../main_shell.dart';
@@ -65,6 +66,7 @@ class DesktopHome extends StatelessWidget {
           ),
         ]),
       ),
+      const _Section(top: 20, child: DailyPollSection()),
       const _Section(top: 28, child: YourConstituencyCard()),
       if (home.showFeatured && (featuredPolls.isNotEmpty || closedFeaturedPolls.isNotEmpty))
         _Section(

@@ -3,9 +3,11 @@ import 'package:flutter/material.dart';
 
 import '../data/ap_data.dart';
 import '../l10n/strings.dart';
+import '../state/app_state.dart';
 import '../state/deep_link.dart';
 import '../state/url_sync.dart';
 import '../widgets/common.dart';
+import '../widgets/daily_poll.dart';
 import 'constituency_list_screen.dart';
 import 'desktop/desktop_home.dart';
 import 'desktop/desktop_pages.dart';
@@ -45,6 +47,41 @@ class _MainShellState extends State<MainShell> {
   void _go(int i) {
     setState(() => _index = i);
     UrlSync.instance.setRoot(UrlSync.tabPaths[i]);
+  }
+
+  AppState? _state;
+  bool _dailyShown = false;
+
+  /// Today's poll pops up once the voter's record is known, until answered.
+  void _maybeShowDaily() {
+    final state = _state;
+    if (state == null || _dailyShown || !mounted || !state.dailyPending) return;
+    final poll = state.todaysPoll!;
+    _dailyShown = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      await showDailyPollPopup(context, poll);
+      // Not answered (e.g. answered elsewhere and the popup closed): ask
+      // again only after the next change.
+      if (mounted) _dailyShown = !state.dailyPending;
+    });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final state = AppScope.of(context);
+    if (!identical(state, _state)) {
+      _state?.removeListener(_maybeShowDaily);
+      _state = state..addListener(_maybeShowDaily);
+    }
+    _maybeShowDaily();
+  }
+
+  @override
+  void dispose() {
+    _state?.removeListener(_maybeShowDaily);
+    super.dispose();
   }
 
   @override

@@ -13,6 +13,7 @@ import 'pages/dashboard_page.dart';
 import 'pages/analytics_page.dart';
 import 'pages/traffic_page.dart';
 import 'pages/civic_settings_page.dart';
+import 'pages/daily_page.dart';
 import 'pages/featured_page.dart';
 import 'pages/issues_page.dart';
 import 'pages/review_pages.dart';
@@ -195,6 +196,7 @@ const _nav = [
   _NavItem(Icons.people_alt_outlined, 'Candidates', CandidatesPage()),
   _NavItem(Icons.map_outlined, 'Constituencies', ConstituenciesPage()),
   _NavItem(Icons.how_to_vote_outlined, 'Featured polls', FeaturedPage()),
+  _NavItem(Icons.today_outlined, "Today's poll", DailyPollsPage()),
   _NavItem(Icons.web_outlined, 'Home & website', HomeContentPage()),
   _NavItem(Icons.report_outlined, 'Local issues & alerts', IssuesPage()),
   _NavItem(Icons.photo_library_outlined, 'Photo review', PhotosPage()),

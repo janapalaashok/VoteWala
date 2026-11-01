@@ -15,6 +15,9 @@ abstract final class PollIds {
   static String priority(PollMonth m) => 'priority-${m.key}';
   static String featured(String id) => 'f-$id';
 
+  /// Today's poll for the IST date yyyy-mm-dd; buckets s0..s9.
+  static String daily(String date) => 'd-$date';
+
   /// Featured polls spread votes over 10 counters per month (shards), so many
   /// people can vote at the same moment.
   static String featuredShard(PollMonth m, Random rnd) => '${m.key}-s${rnd.nextInt(10)}';
@@ -173,6 +176,9 @@ class VoteService {
   }
 
   String featuredBucket(PollMonth month) => PollIds.featuredShard(month, _rnd);
+
+  /// Today's poll counts are spread over ten buckets (s0..s9).
+  String dailyBucket() => 's${_rnd.nextInt(10)}';
 
   /// GOOD (0) / BAD (1) per category slot for the voter's constituency.
   Future<Map<String, Object?>> castIssues({

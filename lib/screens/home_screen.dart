@@ -9,6 +9,7 @@ import '../l10n/strings.dart';
 import '../state/app_state.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
+import '../widgets/daily_poll.dart';
 import '../widgets/painters.dart';
 import 'ap_map_screen.dart';
 import 'browse_screens.dart';
@@ -99,6 +100,8 @@ class HomeScreen extends StatelessWidget {
                   const MonthlyVotesCard(),
                   const SizedBox(height: 8),
                 ],
+                const DailyPollSection(),
+                const SizedBox(height: 8),
                 const YourConstituencyCard(),
                 const SizedBox(height: 8),
                 if (home.showTopSeats) ...[

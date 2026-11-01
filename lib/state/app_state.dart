@@ -8,6 +8,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../config/config_service.dart';
 import '../data/ap_data.dart';
 import '../data/civic.dart';
+import '../data/daily_polls.dart';
+import '../utils.dart';
 import '../data/external_data.dart';
 import '../data/external_votes.dart';
 import '../data/featured_polls.dart';
@@ -182,6 +184,7 @@ class AppState extends ChangeNotifier {
   }
 
   List<String> get _myPollIds => [
+        for (var i = 0; i < 7; i++) PollIds.daily(todayKey(istNow().subtract(Duration(days: i)))),
         for (final m in PollMonth.available()) ...[PollIds.mla(m), PollIds.mp(m)],
         PollIds.issues(PollMonth.current()),
         PollIds.priority(PollMonth.current()),
@@ -382,6 +385,51 @@ class AppState extends ChangeNotifier {
 
   /// Cumulative votes per option over the poll so far.
   List<int> featuredTotals(FeaturedPoll p) => _sum(p, (_) => true);
+
+  // --- Today's poll: one question a day, answered in a popup. ---
+
+  /// The poll scheduled for today (IST), if any.
+  DailyPoll? get todaysPoll {
+    final today = todayKey();
+    for (final p in appConfig.daily) {
+      if (p.date == today && p.isValid) return p;
+    }
+    return null;
+  }
+
+  /// Earlier daily polls (newest first), up to [max].
+  List<DailyPoll> pastDailyPolls({int max = 6}) {
+    final today = todayKey();
+    final list = [for (final p in appConfig.daily) if (p.isValid && p.date.compareTo(today) < 0) p]
+      ..sort((a, b) => b.date.compareTo(a.date));
+    return list.take(max).toList();
+  }
+
+  int? dailyChoice(DailyPoll p) => _record.ballots[PollIds.daily(p.date)]?['option'] as int?;
+
+  /// Show the popup: signed in, record loaded, allowed to vote, not voted yet.
+  bool get dailyPending {
+    final p = todaysPoll;
+    return p != null && _user != null && _user!.emailVerified && _recordLoaded && !_blocked && dailyChoice(p) == null;
+  }
+
+  Future<VoteOutcome> castDailyVote(DailyPoll p, int option) async {
+    if (!p.isToday) throw const VoteException(VoteError.closed);
+    return _castOption(PollIds.daily(p.date), votes.dailyBucket(), option);
+  }
+
+  /// Votes per option of a daily poll.
+  List<int> dailyVotes(DailyPoll p) {
+    final out = List.filled(p.options.length, 0);
+    final id = PollIds.daily(p.date);
+    final buckets = _all(id, month: p.isToday ? null : PollMonth.parse(p.date.substring(0, 7)));
+    for (final b in buckets.values) {
+      for (var i = 0; i < out.length; i++) {
+        out[i] += b['o$i'] ?? 0;
+      }
+    }
+    return out;
+  }
 
   // --- Your constituency: local issues and "If you were the MLA". ---
 
