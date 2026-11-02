@@ -405,6 +405,14 @@ class AppState extends ChangeNotifier {
     return list.take(max).toList();
   }
 
+  /// The daily poll with this link name (`votewala.in/poll/<name>`).
+  DailyPoll? dailyByLink(String name) {
+    for (final p in appConfig.daily) {
+      if (p.isValid && (p.linkName == name || p.date == name)) return p;
+    }
+    return null;
+  }
+
   int? dailyChoice(DailyPoll p) => _record.ballots[PollIds.daily(p.date)]?['option'] as int?;
 
   /// Show the popup: signed in, record loaded, allowed to vote, not voted yet.

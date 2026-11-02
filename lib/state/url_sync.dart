@@ -14,6 +14,7 @@ import '../screens/info_screens.dart';
 import '../screens/legal_screens.dart';
 import '../screens/live_results_screen.dart';
 import '../screens/welcome_screen.dart';
+import '../widgets/daily_poll.dart';
 import '../screens/login_screen.dart';
 import '../screens/main_shell.dart';
 import '../screens/my_constituency_screen.dart';
@@ -67,6 +68,7 @@ class UrlSync extends NavigatorObserver {
           districtId == null ? '/${type.name}' : '/${type.name}/district/$districtId',
         ResultsScreen(embedded: false) => '/results',
         LegalScreen(:final doc) => '/legal/${doc.id}',
+        DailyPollScreen(:final poll) => '/poll/${poll.linkName}',
         LoginScreen() => '/login',
         OtpScreen() => '/login',
         InfoScreen(titleKey: 'aboutApp') => '/about',
