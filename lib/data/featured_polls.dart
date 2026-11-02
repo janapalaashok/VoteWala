@@ -28,6 +28,9 @@ const featuredIcons = <String, IconData>{
   'down': Icons.thumb_down_alt,
   'neutral': Icons.remove_circle_outline,
   'star': Icons.star,
+  'jobs': Icons.work,
+  'health': Icons.favorite,
+  'eco': Icons.eco,
 };
 
 class FeaturedOption {

@@ -26,4 +26,22 @@ void main() {
         isFalse);
     expect(todayKey(DateTime(2026, 1, 5)), '2026-01-05');
   });
+
+  test('poster, link name and icons survive the round trip', () {
+    const withPoster = DailyPoll(
+      date: '2026-11-03',
+      questionEn: 'Which sector first?',
+      questionTe: '',
+      options: [DailyOption('Jobs', 'ఉద్యోగాలు', icon: 'jobs'), DailyOption('Education', 'విద్య', icon: 'school')],
+      imageUrl: 'https://example.com/poster.png',
+      slug: 'ap-development-priority',
+    );
+    final back = DailyPoll.fromJson(withPoster.toJson());
+    expect(back.imageUrl, 'https://example.com/poster.png');
+    expect(back.linkName, 'ap-development-priority');
+    expect(back.options.first.iconData, isNotNull);
+    expect(poll.linkName, '2026-11-02');
+    expect(DailyPoll.slugify('AP Development Priority!'), 'ap-development-priority');
+    expect(DailyPoll.slugify('  ఏ రంగం? '), '');
+  });
 }

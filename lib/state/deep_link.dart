@@ -8,6 +8,8 @@ import '../screens/home_screen.dart';
 import '../screens/live_results_screen.dart';
 import '../screens/candidate_detail_screen.dart';
 import '../screens/constituency_list_screen.dart';
+import '../widgets/daily_poll.dart';
+import 'app_state.dart';
 import 'url_sync.dart';
 
 /// Page addresses opened directly (typed, refreshed, bookmarked or shared):
@@ -31,6 +33,7 @@ class DeepLink {
   static final _constituency = RegExp(r'^/c/((?:mla|mp)-\d{1,3})(/results|/candidate/[0-2])?$');
   static final _featured = RegExp(r'^/f/([A-Za-z0-9-]+)$');
   static final _district = RegExp(r'^/(mla|mp)/district/([a-z0-9_-]+)$');
+  static final _daily = RegExp(r'^/poll/([a-z0-9-]{1,60})$');
 
   static void parse(String path) {
     final l = RegExp(r'^/legal/([a-z]+)$').firstMatch(path);
@@ -38,6 +41,7 @@ class DeepLink {
     if (_constituency.hasMatch(path) ||
         _featured.hasMatch(path) ||
         _district.hasMatch(path) ||
+        _daily.hasMatch(path) ||
         UrlSync.tabPaths.contains(path) ||
         UrlSync.simplePages.containsKey(path)) {
       _pending = path;
@@ -50,6 +54,31 @@ class DeepLink {
     if (i < 0) return null;
     _pending = null;
     return i;
+  }
+
+  /// A shared poll link: today's unanswered poll pops up by itself (the main
+  /// screen does that); otherwise its page opens with the results. A first
+  /// visit may still be loading the published polls, so wait a little.
+  static Future<void> _openDaily(BuildContext context, String name, [int tries = 0]) async {
+    final state = AppScope.read(context);
+    final poll = state.dailyByLink(name);
+    if (poll == null) {
+      if (tries >= 10) return;
+      await Future<void>.delayed(const Duration(seconds: 1));
+      if (context.mounted) await _openDaily(context, name, tries + 1);
+      return;
+    }
+    if (poll.isToday) {
+      // Wait for the voter's record: unanswered -> the popup asks it.
+      if (!state.recordLoaded && tries < 10) {
+        await Future<void>.delayed(const Duration(seconds: 1));
+        if (context.mounted) await _openDaily(context, name, tries + 1);
+        return;
+      }
+      if (state.dailyChoice(poll) == null && !state.blocked) return;
+    }
+    if (!context.mounted) return;
+    Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => DailyPollScreen(poll: poll)));
   }
 
   /// Opens the pending page, if any. Unknown ids are ignored.
@@ -75,6 +104,8 @@ class DeepLink {
         ApData.district(m.group(2)!); // throws for an unknown district
         push(ConstituencyListScreen(
             type: m.group(1) == 'mp' ? ElectionType.mp : ElectionType.mla, districtId: m.group(2)));
+      } else if (_daily.firstMatch(path) case final m?) {
+        _openDaily(context, m.group(1)!);
       } else if (UrlSync.simplePages[path] case final page?) {
         push(page());
       }

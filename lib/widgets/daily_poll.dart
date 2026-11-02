@@ -149,82 +149,101 @@ class _DailyPollDialogState extends State<DailyPollDialog> {
     ),
   );
 
-  Widget _question(BuildContext context, bool te, DailyPoll poll) => SingleChildScrollView(
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
+  Widget _question(BuildContext context, bool te, DailyPoll poll) {
+    final screen = MediaQuery.sizeOf(context);
+    final grid = poll.imageUrl != null || poll.options.any((o) => o.iconData != null);
+    return SingleChildScrollView(
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         _header(context, poll),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(22, 20, 22, 22),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(poll.question(te), style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w800, height: 1.3)),
-              const SizedBox(height: 6),
-              Text(context.tr('dailyPrompt'), style: const TextStyle(color: AppColors.muted, fontSize: 13)),
-              const SizedBox(height: 16),
-              for (var i = 0; i < poll.options.length; i++)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 10),
-                  child: Material(
-                    color: _selected == i ? AppColors.orange.withValues(alpha: 0.08) : Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                      side: BorderSide(
-                        color: _selected == i ? AppColors.orange : AppColors.border,
-                        width: _selected == i ? 2 : 1,
-                      ),
-                    ),
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(14),
-                      onTap: _busy ? null : () => setState(() => _selected = i),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-                        child: Row(
-                          children: [
-                            Icon(
-                              _selected == i ? Icons.radio_button_checked : Icons.radio_button_unchecked,
-                              color: _selected == i ? AppColors.orange : AppColors.grey,
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Text(
-                                poll.options[i].label(te),
-                                style: TextStyle(
-                                  fontWeight: _selected == i ? FontWeight.w700 : FontWeight.w500,
-                                  fontSize: 15,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              if (_error != null) ...[
-                const SizedBox(height: 4),
-                Text(
-                  _error!,
-                  style: TextStyle(color: AppColors.red, fontWeight: FontWeight.w600),
-                ),
-              ],
-              const SizedBox(height: 10),
-              FilledButton(
-                onPressed: _selected == null || _busy ? null : _vote,
-                child: _busy
-                    ? const SizedBox.square(
-                        dimension: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2.4, color: Colors.white),
-                      )
-                    : Text(context.tr('submitVote')),
-              ),
-            ],
+        if (poll.imageUrl != null)
+          // The poster (same picture as on social media).
+          Container(
+            color: const Color(0xFFF3F5F9),
+            constraints: BoxConstraints(maxHeight: screen.height * (screen.width < 600 ? 0.42 : 0.5)),
+            child: Image.network(
+              poll.imageUrl!,
+              fit: BoxFit.contain,
+              webHtmlElementStrategy: webImages,
+              errorBuilder: (_, _, _) => const SizedBox.shrink(),
+            ),
           ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(18, 16, 18, 18),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            Text(poll.question(te),
+                style: TextStyle(fontSize: poll.imageUrl != null ? 16 : 19, fontWeight: FontWeight.w800, height: 1.3)),
+            const SizedBox(height: 4),
+            Text(context.tr('dailyPrompt'), style: const TextStyle(color: AppColors.muted, fontSize: 13)),
+            const SizedBox(height: 14),
+            if (grid)
+              LayoutBuilder(builder: (context, box) {
+                final w = (box.maxWidth - 10) / 2;
+                return Wrap(spacing: 10, runSpacing: 10, children: [
+                  for (var i = 0; i < poll.options.length; i++)
+                    SizedBox(width: w, child: _option(context, te, poll, i, tile: true)),
+                ]);
+              })
+            else
+              for (var i = 0; i < poll.options.length; i++)
+                Padding(padding: const EdgeInsets.only(bottom: 10), child: _option(context, te, poll, i)),
+            if (_error != null) ...[
+              const SizedBox(height: 8),
+              Text(_error!, style: TextStyle(color: AppColors.red, fontWeight: FontWeight.w600)),
+            ],
+            const SizedBox(height: 14),
+            FilledButton(
+              onPressed: _selected == null || _busy ? null : _vote,
+              child: _busy
+                  ? const SizedBox.square(
+                      dimension: 20, child: CircularProgressIndicator(strokeWidth: 2.4, color: Colors.white))
+                  : Text(context.tr('submitVote')),
+            ),
+          ]),
         ),
-      ],
-    ),
-  );
+      ]),
+    );
+  }
+
+  /// One answer: a row, or a tile with its icon (poster polls).
+  Widget _option(BuildContext context, bool te, DailyPoll poll, int i, {bool tile = false}) {
+    final selected = _selected == i;
+    final o = poll.options[i];
+    final color = dailyColor(i);
+    return Material(
+      color: selected ? AppColors.orange.withValues(alpha: 0.08) : Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+        side: BorderSide(color: selected ? AppColors.orange : AppColors.border, width: selected ? 2 : 1),
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: _busy ? null : () => setState(() => _selected = i),
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: 12, vertical: tile ? 12 : 14),
+          child: Row(children: [
+            if (o.iconData != null)
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(10)),
+                child: Icon(o.iconData, color: color, size: 21),
+              )
+            else
+              Icon(selected ? Icons.radio_button_checked : Icons.radio_button_unchecked,
+                  color: selected ? AppColors.orange : AppColors.grey),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(o.label(te),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontWeight: selected ? FontWeight.w800 : FontWeight.w600, fontSize: 15)),
+            ),
+            if (selected && o.iconData != null) Icon(Icons.check_circle, color: AppColors.orange, size: 20),
+          ]),
+        ),
+      ),
+    );
+  }
 
   Widget _thanks(BuildContext context, bool te) => Padding(
     padding: const EdgeInsets.fromLTRB(28, 34, 28, 34),
@@ -288,7 +307,7 @@ class DailyPollSection extends StatelessWidget {
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(flex: 3, child: DailyPollCard(poll: today, highlight: true)),
+                  Expanded(flex: 3, child: DailyPollCard(poll: today, highlight: true, showImage: true)),
                   const SizedBox(width: 20),
                   Expanded(
                     flex: 2,
@@ -297,7 +316,7 @@ class DailyPollSection extends StatelessWidget {
                 ],
               )
             else ...[
-              if (today != null) DailyPollCard(poll: today, highlight: true),
+              if (today != null) DailyPollCard(poll: today, highlight: true, showImage: true),
               if (past.isNotEmpty) ...[const SizedBox(height: 10), ...earlier],
             ],
           ],
@@ -308,10 +327,13 @@ class DailyPollSection extends StatelessWidget {
 }
 
 class DailyPollCard extends StatelessWidget {
-  const DailyPollCard({super.key, required this.poll, this.highlight = false});
+  const DailyPollCard({super.key, required this.poll, this.highlight = false, this.showImage = false});
 
   final DailyPoll poll;
   final bool highlight;
+
+  /// Show the poster above the question (today's poll and its own page).
+  final bool showImage;
 
   @override
   Widget build(BuildContext context) {
@@ -326,6 +348,22 @@ class DailyPollCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          if (showImage && poll.imageUrl != null) ...[
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                color: const Color(0xFFF3F5F9),
+                constraints: const BoxConstraints(maxHeight: 360),
+                child: Image.network(
+                  poll.imageUrl!,
+                  fit: BoxFit.contain,
+                  webHtmlElementStrategy: webImages,
+                  errorBuilder: (_, _, _) => const SizedBox.shrink(),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+          ],
           Row(
             children: [
               Icon(Icons.event_rounded, size: 16, color: highlight ? AppColors.orange : AppColors.muted),
@@ -404,4 +442,20 @@ class DailyPollCard extends StatelessWidget {
       ),
     );
   }
+}
+
+/// A daily poll on its own page: votewala.in/poll/<link name> (shared on
+/// social media). Today's unanswered poll also pops up by itself.
+class DailyPollScreen extends StatelessWidget {
+  const DailyPollScreen({super.key, required this.poll});
+
+  final DailyPoll poll;
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+        appBar: PageBar(title: Text(context.tr('todaysPoll'))),
+        body: ListView(padding: const EdgeInsets.fromLTRB(16, 8, 16, 32), children: [
+          PageBody(maxWidth: 640, child: DailyPollCard(poll: poll, highlight: poll.isToday, showImage: true)),
+        ]),
+      );
 }

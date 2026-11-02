@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../data/daily_polls.dart';
+import '../../data/featured_polls.dart';
 import '../../services/vote_service.dart';
 import '../admin_widgets.dart';
 
@@ -22,9 +24,13 @@ class DailyPollsPage extends StatelessWidget {
         for (final p in admin.draft.daily)
           if (p.date != poll?.date) p.date,
       };
+      final links = {
+        for (final p in admin.draft.daily)
+          if (p.date != poll?.date) p.linkName,
+      };
       final result = await showDialog<DailyPoll>(
         context: context,
-        builder: (_) => _DailyEditor(poll: poll, takenDates: taken),
+        builder: (_) => _DailyEditor(poll: poll, takenDates: taken, takenLinks: links),
       );
       if (result == null) return;
       save([
@@ -230,10 +236,11 @@ class _ResultsState extends State<_Results> {
 }
 
 class _DailyEditor extends StatefulWidget {
-  const _DailyEditor({this.poll, required this.takenDates});
+  const _DailyEditor({this.poll, required this.takenDates, this.takenLinks = const {}});
 
   final DailyPoll? poll;
   final Set<String> takenDates;
+  final Set<String> takenLinks;
 
   @override
   State<_DailyEditor> createState() => _DailyEditorState();
@@ -247,7 +254,17 @@ class _DailyEditorState extends State<_DailyEditor> {
     for (final o in widget.poll?.options ?? const [DailyOption('Yes', 'అవును'), DailyOption('No', 'కాదు')])
       (TextEditingController(text: o.en), TextEditingController(text: o.te)),
   ];
+  late final List<String?> _icons = [for (final o in widget.poll?.options ?? const [DailyOption('', ''), DailyOption('', '')]) o.icon];
+  late String? _image = widget.poll?.imageUrl;
+  late final _link = TextEditingController(text: widget.poll?.slug ?? '');
   String? _error;
+
+  /// The link name used when saving: typed, else from the English question.
+  String? get _linkName {
+    final typed = DailyPoll.slugify(_link.text);
+    final name = typed.isNotEmpty ? typed : DailyPoll.slugify(_qEn.text);
+    return name.isEmpty ? null : name;
+  }
 
   String _firstFreeDate() {
     var d = DateTime.parse(todayKey());
@@ -263,9 +280,12 @@ class _DailyEditorState extends State<_DailyEditor> {
       questionEn: _qEn.text.trim(),
       questionTe: _qTe.text.trim(),
       options: [
-        for (final (en, te) in _options)
-          if (en.text.trim().isNotEmpty) DailyOption(en.text.trim(), te.text.trim()),
+        for (var i = 0; i < _options.length; i++)
+          if (_options[i].$1.text.trim().isNotEmpty)
+            DailyOption(_options[i].$1.text.trim(), _options[i].$2.text.trim(), icon: _icons[i]),
       ],
+      imageUrl: _image,
+      slug: _linkName,
     );
     final problem = widget.takenDates.contains(_date)
         ? 'Another poll is already scheduled for this date.'
@@ -273,6 +293,8 @@ class _DailyEditorState extends State<_DailyEditor> {
         ? 'Write the question in English.'
         : poll.options.length < 2
         ? 'Give at least two answers.'
+        : widget.takenLinks.contains(poll.linkName)
+        ? 'Another poll already uses the link name "${poll.linkName}".'
         : null;
     if (problem != null) {
       setState(() => _error = problem);
@@ -332,6 +354,43 @@ class _DailyEditorState extends State<_DailyEditor> {
                 decoration: const InputDecoration(labelText: 'Question (Telugu)'),
               ),
               const SizedBox(height: 16),
+              ImageField(
+                label: 'Poster image (optional)',
+                helper: 'Shown big in the popup, like the picture you post on social media. Portrait (4:5) works best.',
+                url: _image,
+                folder: 'daily',
+                size: 110,
+                onChanged: (u) => setState(() => _image = u),
+              ),
+              const SizedBox(height: 14),
+              TextField(
+                controller: _link,
+                onChanged: (_) => setState(() {}),
+                decoration: InputDecoration(
+                  labelText: 'Link name (optional)',
+                  hintText: DailyPoll.slugify(_qEn.text).isEmpty ? 'ap-development-priority' : DailyPoll.slugify(_qEn.text),
+                ),
+              ),
+              const SizedBox(height: 6),
+              Row(children: [
+                Expanded(
+                  child: SelectableText(
+                    'https://votewala.in/poll/${_linkName ?? _date}',
+                    style: const TextStyle(color: AdminColors.accent, fontWeight: FontWeight.w600),
+                  ),
+                ),
+                IconButton(
+                  tooltip: 'Copy link',
+                  icon: const Icon(Icons.copy, size: 18),
+                  onPressed: () {
+                    Clipboard.setData(ClipboardData(text: 'https://votewala.in/poll/${_linkName ?? _date}'));
+                    showAdminSnack(context, 'Link copied');
+                  },
+                ),
+              ]),
+              const Text('Post this link with the image on social media; it opens the poll on the site.',
+                  style: TextStyle(color: AdminColors.muted, fontSize: 12.5)),
+              const SizedBox(height: 16),
               const Text('Answers (2 to 8)', style: TextStyle(fontWeight: FontWeight.w700)),
               const SizedBox(height: 8),
               for (var i = 0; i < _options.length; i++)
@@ -352,10 +411,32 @@ class _DailyEditorState extends State<_DailyEditor> {
                           decoration: InputDecoration(labelText: 'Answer ${i + 1} (Telugu)'),
                         ),
                       ),
+                      const SizedBox(width: 10),
+                      DropdownButton<String?>(
+                        value: _icons[i],
+                        hint: const Text('Icon'),
+                        underline: const SizedBox.shrink(),
+                        items: [
+                          const DropdownMenuItem<String?>(value: null, child: Text('No icon')),
+                          for (final e in featuredIcons.entries)
+                            DropdownMenuItem<String?>(
+                              value: e.key,
+                              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                                Icon(e.value, size: 18),
+                                const SizedBox(width: 6),
+                                Text(e.key),
+                              ]),
+                            ),
+                        ],
+                        onChanged: (v) => setState(() => _icons[i] = v),
+                      ),
                       if (_options.length > 2)
                         IconButton(
                           tooltip: 'Remove',
-                          onPressed: () => setState(() => _options.removeAt(i)),
+                          onPressed: () => setState(() {
+                            _options.removeAt(i);
+                            _icons.removeAt(i);
+                          }),
                           icon: const Icon(Icons.close),
                         ),
                     ],
@@ -365,7 +446,10 @@ class _DailyEditorState extends State<_DailyEditor> {
                 Align(
                   alignment: Alignment.centerLeft,
                   child: TextButton.icon(
-                    onPressed: () => setState(() => _options.add((TextEditingController(), TextEditingController()))),
+                    onPressed: () => setState(() {
+                      _options.add((TextEditingController(), TextEditingController()));
+                      _icons.add(null);
+                    }),
                     icon: const Icon(Icons.add),
                     label: const Text('Add answer'),
                   ),
